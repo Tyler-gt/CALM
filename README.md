@@ -2,6 +2,10 @@
 
 Code for **CALM A Self Adaptive Knowledge Data Framework for Universal Metallic Materials Exploration**.
 
+![CALM framework: data and knowledge fusion, EWRC adaptive weighting, and FSR feedback updating](assets/calm-framework.png)
+
+*Figure 2 from the paper: the CALM exploration loop, EWRC-based adaptive weighting, and feedback-guided shortlist reranking (FSR).*
+
 CALM combines a calibrated GPR/RFR/bootstrap-LightGBM/MLP ensemble with LLM-derived materials knowledge. Feedback-guided shortlist reranking (FSR) updates knowledge ranks using measured anchors and persistent candidate references. Extreme-weighted rank correlation (EWRC) adapts the knowledge weight:
 
 $$
