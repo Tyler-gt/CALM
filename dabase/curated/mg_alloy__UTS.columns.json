@@ -1,0 +1,102 @@
+{
+  "column_schema_fingerprint": "0ed89edc923267e6",
+  "composition_closure_audit": {
+    "maximum_after_exclusion": 100.00000000000001,
+    "minimum_after_exclusion": 99.99999999999999,
+    "mode": "derived_Mg_balance_complete_composition",
+    "rows_excluded_generic_RE": 5,
+    "rows_excluded_missing_structured_composition": 2,
+    "sum_range": [
+      99.999999999,
+      100.000000001
+    ]
+  },
+  "composition_missing_policy": "complete_composition_required_v1",
+  "composition_unit": "wt.%",
+  "curation_version": "official_source_candidate_dedup_median_lineage_v24",
+  "element_cols": [
+    "Mg",
+    "Zn",
+    "Ca",
+    "Mn",
+    "Sm",
+    "La",
+    "Gd",
+    "Zr",
+    "Nd",
+    "Ce",
+    "Bi",
+    "Y",
+    "Li",
+    "Al",
+    "Sr",
+    "Sn",
+    "Dy",
+    "Si",
+    "Ag",
+    "Cu"
+  ],
+  "metadata_cols": [
+    "Alloy_formula",
+    "DOI",
+    "Biomedical_subset_flag"
+  ],
+  "physical_deduplication": {
+    "candidate_key_columns": [
+      "Mg",
+      "Zn",
+      "Ca",
+      "Mn",
+      "Sm",
+      "La",
+      "Gd",
+      "Zr",
+      "Nd",
+      "Ce",
+      "Bi",
+      "Y",
+      "Li",
+      "Al",
+      "Sr",
+      "Sn",
+      "Dy",
+      "Si",
+      "Ag",
+      "Cu",
+      "Pre_extrusion_treatment",
+      "Post_extrusion_treatment",
+      "Extrusion_type",
+      "Extrusion_temperature_C",
+      "Extrusion_ratio",
+      "Extrusion_speed"
+    ],
+    "n_rows_after_input_audit": 305,
+    "n_source_rows": 312,
+    "n_unique_rows_before_target_filter": 298,
+    "n_unique_task_rows": 289,
+    "target_aggregation": "median_ignore_missing",
+    "version": "official_source_candidate_dedup_median_lineage_v24"
+  },
+  "process_cols": [
+    "Pre_extrusion_treatment",
+    "Post_extrusion_treatment",
+    "Extrusion_type",
+    "Extrusion_temperature_C",
+    "Extrusion_ratio",
+    "Extrusion_speed"
+  ],
+  "role_source": "official_v24_curated_registry_v1",
+  "source_order_fingerprint": "21442df105385779a99a34354bbed25dee0bbff4af8cdeed7e9a0cbf825bb342",
+  "target_col": "UTS_MPa",
+  "target_cols": [
+    "Grain_size_um",
+    "Grain_size_SD_um",
+    "YS_MPa",
+    "YS_SD_MPa",
+    "UTS_MPa",
+    "UTS_SD_MPa",
+    "Elongation_percent",
+    "Elongation_SD_percent",
+    "Reported_phases"
+  ]
+}

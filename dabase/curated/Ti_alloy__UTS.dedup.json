@@ -1,0 +1,91 @@
+{
+  "aggregated_response_columns": [
+    "F1",
+    "F2",
+    "F3",
+    "O_content_wppm",
+    "Grain_size_um",
+    "Young_modulus_GPa",
+    "Young_modulus_error_GPa",
+    "YS_MPa",
+    "YS_error_MPa",
+    "UTS_MPa",
+    "UTS_error_MPa",
+    "Deformation_at_rupture_percent",
+    "Deformation_at_rupture_error_percent",
+    "Hardness_HV",
+    "Hardness_error_HV",
+    "moe"
+  ],
+  "audit_file": "dabase/curated/audit/Ti_alloy__UTS.csv",
+  "candidate_key_columns": [
+    "Al",
+    "Cr",
+    "Cu",
+    "Fe",
+    "Hf",
+    "Mn",
+    "Mo",
+    "Nb",
+    "Ni",
+    "Sc",
+    "Si",
+    "Sn",
+    "Ta",
+    "Ti",
+    "V",
+    "W",
+    "Zr",
+    "Condition"
+  ],
+  "candidate_order": "first_source_occurrence",
+  "column_roles_file": "dabase/curated/Ti_alloy__UTS.columns.json",
+  "composition_closure_audit": {
+    "fraction_scale_rows": 197,
+    "maximum_after_normalization": 101.0,
+    "minimum_after_normalization": 99.965,
+    "mode": "official_at_fraction_or_percent_normalized_to_at_percent",
+    "percent_scale_rows": 86,
+    "sum_range": [
+      99.0,
+      101.1
+    ]
+  },
+  "composition_missing_cell_count": 0,
+  "composition_missing_policy": "complete_composition_required_v1",
+  "composition_reported_sum_max": 101.0,
+  "composition_reported_sum_min": 99.965,
+  "composition_unit": "at.%",
+  "deduplication_version": "official_source_candidate_dedup_median_lineage_v24",
+  "metadata_policy": "first_source_row_not_model_input",
+  "n_rows_after_input_audit": 283,
+  "n_rows_collapsed_before_target_filter": 23,
+  "n_rows_excluded_input_audit": 0,
+  "n_source_rows": 283,
+  "n_unique_rows": 185,
+  "n_unique_rows_before_target_filter": 260,
+  "numeric_key_rounding_decimals": 12,
+  "processed_file": "dabase/curated/Ti_alloy__UTS.csv",
+  "processed_sha256": "caa733a3b16181b304039ee6f8b453ddf60298826963c2e856c2b3a24a52bfc7",
+  "publication_policy": "immutable_official_source_to_versioned_model_ready_csv_v24",
+  "source_file": "dabase/external_datasets/provenance/section_a_v24/ti/dax-ti-static.csv",
+  "source_lineage_file": "dabase/curated/audit/ti_mechanical__source_lineage.csv",
+  "source_metadata": {
+    "article_doi": "10.1038/s41597-022-01283-9",
+    "dataset_doi": "10.5281/zenodo.6089749",
+    "license": "CC-BY-4.0",
+    "official_md5": "aa528c65e1ea5c4d3c7b8a78ea0b86e1"
+  },
+  "source_name": "ti_mechanical",
+  "source_sha256": "297da7f6843c8acf8e3956d722d606d32b65cc52113ba33b217afd37a65b8f21",
+  "target_aggregation": "median_ignore_missing",
+  "target_valid_rows": {
+    "UTS_MPa": 185
+  },
+  "task_target_maxima": {
+    "UTS_MPa": 2400.0
+  },
+  "task_target_valid_rows": {
+    "UTS_MPa": 185
+  }
+}

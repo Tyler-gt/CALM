@@ -1,0 +1,96 @@
+{
+  "aggregated_response_columns": [
+    "Hardness_HV",
+    "Yield_Strength_MPa",
+    "Ultimate_Tensile_Strength_MPa",
+    "Electrical_conductivity_pctIACS"
+  ],
+  "audit_file": "dabase/curated/audit/Cu_alloys__EC.csv",
+  "candidate_key_columns": [
+    "Cu",
+    "Al",
+    "Ag",
+    "B",
+    "Be",
+    "Ca",
+    "Co",
+    "Ce",
+    "Cr",
+    "Fe",
+    "Hf",
+    "La",
+    "Mg",
+    "Mn",
+    "Mo",
+    "Nb",
+    "Nd",
+    "Ni",
+    "P",
+    "Pb",
+    "Pr",
+    "Si",
+    "Sn",
+    "Ti",
+    "V",
+    "Zn",
+    "Zr",
+    "Solution_Treatment_Temperature_K",
+    "Solution_Treatment_Time_h",
+    "Cold_Rolling_Reduction_percent",
+    "Aging",
+    "Aging_Temperature_K",
+    "Aging_Time_h",
+    "Secondary_Thermomechanical_Process"
+  ],
+  "candidate_order": "first_source_occurrence",
+  "column_roles_file": "dabase/curated/Cu_alloys__EC.columns.json",
+  "composition_closure_audit": {
+    "maximum_after_exclusion": 100.15,
+    "maximum_before_exclusion": 100.15,
+    "minimum_after_exclusion": 99.88,
+    "minimum_before_exclusion": 86.71000000000001,
+    "mode": "complete_composition_sum_range",
+    "rows_excluded": 12,
+    "sum_range": [
+      95.0,
+      105.0
+    ]
+  },
+  "composition_missing_cell_count": 0,
+  "composition_missing_policy": "complete_composition_required_v1",
+  "composition_reported_sum_max": 100.15,
+  "composition_reported_sum_min": 99.88,
+  "composition_unit": "wt.%",
+  "deduplication_version": "official_source_candidate_dedup_median_lineage_v24",
+  "metadata_policy": "first_source_row_not_model_input",
+  "n_rows_after_input_audit": 1819,
+  "n_rows_collapsed_before_target_filter": 328,
+  "n_rows_excluded_input_audit": 12,
+  "n_source_rows": 1831,
+  "n_unique_rows": 1486,
+  "n_unique_rows_before_target_filter": 1491,
+  "numeric_key_rounding_decimals": 12,
+  "processed_file": "dabase/curated/Cu_alloys__EC.csv",
+  "processed_sha256": "7df44cf618449920d0020843afb65fac527c10ce7eedcaba0727c64dd165fe2e",
+  "publication_policy": "immutable_official_source_to_versioned_model_ready_csv_v24",
+  "source_file": "dabase/external_datasets/provenance/section_a_v24/cu/Cu_alloys_database_2023_06_06.csv",
+  "source_lineage_file": "dabase/curated/audit/cu_conductivity__source_lineage.csv",
+  "source_metadata": {
+    "article_doi": "10.1038/s41597-023-02411-9",
+    "dataset_doi": "10.6084/m9.figshare.c.6475600.v1",
+    "license": "CC0-1.0",
+    "official_md5": "9f25f99db892a0286fea30f78fd766b7"
+  },
+  "source_name": "cu_conductivity",
+  "source_sha256": "b683768c4a59da338fbccbefee04d6304ef3cf4c3742183b8cd89ab29f886c38",
+  "target_aggregation": "median_ignore_missing",
+  "target_valid_rows": {
+    "Electrical_conductivity_pctIACS": 1486
+  },
+  "task_target_maxima": {
+    "Electrical_conductivity_pctIACS": 93.0
+  },
+  "task_target_valid_rows": {
+    "Electrical_conductivity_pctIACS": 1486
+  }
+}

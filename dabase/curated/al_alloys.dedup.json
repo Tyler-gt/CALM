@@ -1,0 +1,69 @@
+{
+  "aggregated_response_columns": [
+    "UTS",
+    "EL"
+  ],
+  "audit_file": "dabase\\curated\\audit\\al_alloys.csv",
+  "candidate_key_columns": [
+    "Si",
+    "Fe",
+    "Cu",
+    "Mn",
+    "Mg",
+    "Cr",
+    "Zn",
+    "V",
+    "Ti",
+    "Zr",
+    "Ni",
+    "Bi",
+    "Pb",
+    "Sc",
+    "Al",
+    "SATemp",
+    "AgeingTemp",
+    "AgeingTime",
+    "ManufacturingMethod",
+    "HeatTreatmentMedium",
+    "AgeingType"
+  ],
+  "candidate_order": "first_source_occurrence",
+  "column_roles_file": "dabase\\curated\\al_alloys.columns.json",
+  "composition_closure_audit": {
+    "composition_unit": "wt.%",
+    "maximum_after_exclusion": 100.0,
+    "maximum_before_exclusion": 100.0,
+    "minimum_after_exclusion": 99.99999999999999,
+    "minimum_before_exclusion": 99.99999999999999,
+    "sum_range": [
+      95.0,
+      105.0
+    ]
+  },
+  "composition_unit": "wt.%",
+  "composition_unit_normalization": "disabled",
+  "deduplication_version": "physical_visible_inputs_closure95_105_numeric12_target_median_v2",
+  "metadata_policy": "first_source_row",
+  "n_duplicate_groups": 43,
+  "n_rows_after_input_audit": 289,
+  "n_rows_collapsed": 150,
+  "n_rows_excluded_input_audit": 0,
+  "n_source_rows": 289,
+  "n_unique_rows": 139,
+  "numeric_key_rounding_decimals": 12,
+  "processed_file": "dabase\\curated\\al_alloys.csv",
+  "processed_sha256": "b19249b1879ccd23478add581e1c9be5ca04af63b073ca6e7e6cd9c5bab0a24c",
+  "publication_policy": "immutable_raw_workbook_to_versioned_model_ready_csv_v1",
+  "source_file": "al_alloys.xlsx",
+  "source_sha256": "7561c1bc343144abd49bb12820c6c9a23c68138a0908062cd302a1bc6376d96b",
+  "source_sha256_before": "7561c1bc343144abd49bb12820c6c9a23c68138a0908062cd302a1bc6376d96b",
+  "target_aggregation": "median_ignore_missing",
+  "task_target_maxima": {
+    "EL": 26.3,
+    "UTS": 527.0
+  },
+  "task_target_valid_rows": {
+    "EL": 134,
+    "UTS": 138
+  }
+}

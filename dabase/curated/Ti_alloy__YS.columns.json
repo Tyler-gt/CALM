@@ -1,0 +1,103 @@
+{
+  "column_schema_fingerprint": "49dc3d9c0820bce8",
+  "composition_closure_audit": {
+    "fraction_scale_rows": 197,
+    "maximum_after_normalization": 101.0,
+    "minimum_after_normalization": 99.965,
+    "mode": "official_at_fraction_or_percent_normalized_to_at_percent",
+    "percent_scale_rows": 86,
+    "sum_range": [
+      99.0,
+      101.1
+    ]
+  },
+  "composition_missing_policy": "complete_composition_required_v1",
+  "composition_unit": "at.%",
+  "curation_version": "official_source_candidate_dedup_median_lineage_v24",
+  "element_cols": [
+    "Al",
+    "Cr",
+    "Cu",
+    "Fe",
+    "Hf",
+    "Mn",
+    "Mo",
+    "Nb",
+    "Ni",
+    "Sc",
+    "Si",
+    "Sn",
+    "Ta",
+    "Ti",
+    "V",
+    "W",
+    "Zr"
+  ],
+  "metadata_cols": [
+    "Source_table_row",
+    "id",
+    "eid",
+    "Formula_at_percent",
+    "R1",
+    "R2",
+    "R3",
+    "comments",
+    "Composition_string"
+  ],
+  "physical_deduplication": {
+    "candidate_key_columns": [
+      "Al",
+      "Cr",
+      "Cu",
+      "Fe",
+      "Hf",
+      "Mn",
+      "Mo",
+      "Nb",
+      "Ni",
+      "Sc",
+      "Si",
+      "Sn",
+      "Ta",
+      "Ti",
+      "V",
+      "W",
+      "Zr",
+      "Condition"
+    ],
+    "n_rows_after_input_audit": 283,
+    "n_source_rows": 283,
+    "n_unique_rows_before_target_filter": 260,
+    "n_unique_task_rows": 248,
+    "target_aggregation": "median_ignore_missing",
+    "version": "official_source_candidate_dedup_median_lineage_v24"
+  },
+  "process_cols": [
+    "Condition"
+  ],
+  "role_source": "official_v24_curated_registry_v1",
+  "source_order_fingerprint": "57fe9700eee29671d62be492ce18c3486739af19d5dada7955a559efdbff8710",
+  "target_col": "YS_MPa",
+  "target_cols": [
+    "F1",
+    "F2",
+    "F3",
+    "O_content_wppm",
+    "Grain_size_um",
+    "Young_modulus_GPa",
+    "Young_modulus_error_GPa",
+    "YS_MPa",
+    "YS_error_MPa",
+    "UTS_MPa",
+    "UTS_error_MPa",
+    "Deformation_at_rupture_percent",
+    "Deformation_at_rupture_error_percent",
+    "Hardness_HV",
+    "Hardness_error_HV",
+    "moe",
+    "moe_class",
+    "ph1",
+    "ph2",
+    "ph3"
+  ]
+}

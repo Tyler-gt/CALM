@@ -1,0 +1,80 @@
+{
+  "column_schema_fingerprint": "4b9f93bf02aa0577",
+  "composition_closure_audit": {
+    "composition_unit": "wt.%",
+    "maximum_after_exclusion": 100.0,
+    "maximum_before_exclusion": 100.0,
+    "minimum_after_exclusion": 99.99999999999999,
+    "minimum_before_exclusion": 99.99999999999999,
+    "sum_range": [
+      95.0,
+      105.0
+    ]
+  },
+  "composition_unit": "wt.%",
+  "element_cols": [
+    "Si",
+    "Fe",
+    "Cu",
+    "Mn",
+    "Mg",
+    "Cr",
+    "Zn",
+    "V",
+    "Ti",
+    "Zr",
+    "Ni",
+    "Bi",
+    "Pb",
+    "Sc",
+    "Al"
+  ],
+  "metadata_cols": [
+    "Alloy"
+  ],
+  "physical_deduplication": {
+    "candidate_key_columns": [
+      "Si",
+      "Fe",
+      "Cu",
+      "Mn",
+      "Mg",
+      "Cr",
+      "Zn",
+      "V",
+      "Ti",
+      "Zr",
+      "Ni",
+      "Bi",
+      "Pb",
+      "Sc",
+      "Al",
+      "SATemp",
+      "AgeingTemp",
+      "AgeingTime",
+      "ManufacturingMethod",
+      "HeatTreatmentMedium",
+      "AgeingType"
+    ],
+    "n_rows_after_input_audit": 289,
+    "n_source_rows": 289,
+    "n_unique_rows": 139,
+    "target_aggregation": "median_ignore_missing",
+    "version": "physical_visible_inputs_closure95_105_numeric12_target_median_v2"
+  },
+  "process_cols": [
+    "SATemp",
+    "AgeingTemp",
+    "AgeingTime",
+    "ManufacturingMethod",
+    "HeatTreatmentMedium",
+    "AgeingType"
+  ],
+  "role_source": "curated_physical_dedup_registry_v1",
+  "source_order_fingerprint": "99744454f78629dc3f90c6302a8666c7a04f8017b621b1ddd12542356a427c5d",
+  "target_col": "UTS",
+  "target_cols": [
+    "UTS",
+    "EL"
+  ]
+}

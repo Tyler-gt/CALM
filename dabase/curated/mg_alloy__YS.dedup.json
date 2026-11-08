@@ -1,0 +1,91 @@
+{
+  "aggregated_response_columns": [
+    "Grain_size_um",
+    "Grain_size_SD_um",
+    "YS_MPa",
+    "YS_SD_MPa",
+    "UTS_MPa",
+    "UTS_SD_MPa",
+    "Elongation_percent",
+    "Elongation_SD_percent"
+  ],
+  "audit_file": "dabase/curated/audit/mg_alloy__YS.csv",
+  "candidate_key_columns": [
+    "Mg",
+    "Zn",
+    "Ca",
+    "Mn",
+    "Sm",
+    "La",
+    "Gd",
+    "Zr",
+    "Nd",
+    "Ce",
+    "Bi",
+    "Y",
+    "Li",
+    "Al",
+    "Sr",
+    "Sn",
+    "Dy",
+    "Si",
+    "Ag",
+    "Cu",
+    "Pre_extrusion_treatment",
+    "Post_extrusion_treatment",
+    "Extrusion_type",
+    "Extrusion_temperature_C",
+    "Extrusion_ratio",
+    "Extrusion_speed"
+  ],
+  "candidate_order": "first_source_occurrence",
+  "column_roles_file": "dabase/curated/mg_alloy__YS.columns.json",
+  "composition_closure_audit": {
+    "maximum_after_exclusion": 100.00000000000001,
+    "minimum_after_exclusion": 99.99999999999999,
+    "mode": "derived_Mg_balance_complete_composition",
+    "rows_excluded_generic_RE": 5,
+    "rows_excluded_missing_structured_composition": 2,
+    "sum_range": [
+      99.999999999,
+      100.000000001
+    ]
+  },
+  "composition_missing_cell_count": 0,
+  "composition_missing_policy": "complete_composition_required_v1",
+  "composition_reported_sum_max": 100.00000000000001,
+  "composition_reported_sum_min": 99.99999999999999,
+  "composition_unit": "wt.%",
+  "deduplication_version": "official_source_candidate_dedup_median_lineage_v24",
+  "metadata_policy": "first_source_row_not_model_input",
+  "n_rows_after_input_audit": 305,
+  "n_rows_collapsed_before_target_filter": 7,
+  "n_rows_excluded_input_audit": 7,
+  "n_source_rows": 312,
+  "n_unique_rows": 298,
+  "n_unique_rows_before_target_filter": 298,
+  "numeric_key_rounding_decimals": 12,
+  "processed_file": "dabase/curated/mg_alloy__YS.csv",
+  "processed_sha256": "b74e9ef22db890d13a536dc25b632b176a32f5882a24c3a7f179cfe70a6b6c95",
+  "publication_policy": "immutable_official_source_to_versioned_model_ready_csv_v24",
+  "source_file": "dabase/external_datasets/provenance/section_a_v24/mg/Extracted_data_Raw.csv",
+  "source_lineage_file": "dabase/curated/audit/mg_mechanical__source_lineage.csv",
+  "source_metadata": {
+    "article_doi": "10.1016/j.matdes.2026.116060",
+    "dataset_doi": "10.5281/zenodo.17672235",
+    "license": "CC-BY-4.0",
+    "official_md5": "1951582d77b209b995260098990beeed"
+  },
+  "source_name": "mg_mechanical",
+  "source_sha256": "756cddf42a51a88c10620ec43906635df8df7b3a57227d9d5d5e28b9ddc958c1",
+  "target_aggregation": "median_ignore_missing",
+  "target_valid_rows": {
+    "YS_MPa": 298
+  },
+  "task_target_maxima": {
+    "YS_MPa": 425.0
+  },
+  "task_target_valid_rows": {
+    "YS_MPa": 298
+  }
+}
