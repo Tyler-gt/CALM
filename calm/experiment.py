@@ -23,19 +23,16 @@ from calm.objective import (
 
 PROJECT = Path(__file__).resolve().parent.parent
 OUTPUT_ROOT = PROJECT / "outputs"
-EXPERIMENT_VERSION = "calm_method_v1"
+EXPERIMENT_VERSION = "calm_paper_v1"
 
 # Stable scoring salt: package names and output locations must not change the
-# deterministic order among equal knowledge scores or shuffled-control seeds.
+# deterministic order among equal knowledge scores used in the paper.
 KNOWLEDGE_TIE_SALT = (
     "sA_v33_objsrc_raw_mlp_anchor_memory_llmdynamic_ewrc_"
     "norag_dsv4pro_1kpertask_q4_b40_10r"
 )
 
-STRATEGY_SET_VERSION = (
-    "bootstrap_gbdt_plus_calibrated_soft_ensemble_ucb_llm_rank_"
-    "llm_dynamic_static_and_objective_anchor_memory_dynamic_hybrid_v14"
-)
+STRATEGY_SET_VERSION = "calm_paper_main_nine_strategies_v1"
 
 SURROGATE_POLICY_VERSION = "matched_oof_calibrated_gbdt_rfr_gpr_mlp_v3"
 NN_SURROGATE_VERSION = "standardized_mlp_64_32_16_gelu_mc_dropout30_v1"
@@ -45,7 +42,6 @@ DYNAMIC_RANK_FUSION_VERSION = "shortlist_static_rank_slot_permutation_v2"
 LLM_DYNAMIC_SHORTLIST_POLICY_VERSION = (
     "static_rank_top90_random10_no_surrogate_signal_v2"
 )
-KNOWLEDGE_SCORE_CONTROL_VERSION = "paired_run_static_score_permutation_v1"
 KNOWLEDGE_TIE_BREAK_VERSION = (
     "canonical_candidate_sha256_task_target_unit_protocol_v1"
 )
@@ -72,13 +68,7 @@ LLM_EVIDENCE_VERSION = (
 LLM_API_BASE_URL = get_api_base_url()
 LLM_SCORING_MODEL = get_llm_model()
 LLM_SCORING_TEMPERATURE = 0.0
-LLM_RETRIEVAL_TOP_K = 5
-LLM_USE_HYDE = False
 LLM_RETRIEVAL_MODE = "disabled"
-LLM_RETRIEVAL_POLICY_VERSION = (
-    "hyde_explicit_composition_unit_process_units_title_bm25_sections6_"
-    "snippet1200_max2source_content_ids_v6"
-)
 LLM_RETRY_POLICY_VERSION = "retry_transient_forever_no_static_fallback_v1"
 LLM_KEY_SCHEDULER_VERSION = "single_assigned_key_local_cooldown_v2"
 DATASET_KEY_ALLOCATION_VERSION = (
@@ -171,9 +161,6 @@ def resolve_resource_allocation(
 
 # Runs use their own caches. Dynamic knowledge reranks static shortlist slots
 # with measured anchors and persistent target-blind M1 references.
-COMPATIBLE_LLM_CACHE_EXPERIMENTS: tuple[str, ...] = ()
-COMPATIBLE_FEATURE_CACHE_EXPERIMENTS: tuple[str, ...] = ()
-
 STRATEGY_NAMES = (
     "Random",
     "GPR-UCB",
@@ -183,42 +170,21 @@ STRATEGY_NAMES = (
     "Adaptive-UCB",
     "LLM-rank",
     "LLM-dynamic",
-    "Hybrid-static",
-    "Hybrid",
+    "CALM",
 )
 
 DYNAMIC_STRATEGY_NAMES = (
     "LLM-dynamic",
-    "Hybrid",
+    "CALM",
 )
 
 DYNAMIC_EVIDENCE_FILENAMES = {
     "LLM-dynamic": "_llm_dynamic_evidence.jsonl",
-    "Hybrid": "_dynamic_llm_evidence.jsonl",
+    "CALM": "_dynamic_llm_evidence.jsonl",
 }
 
-# The confirmatory family is defined within each task: Hybrid is compared with
-# all six data-only acquisition baselines using paired runs and Holm FWER
-# control across exactly these six hypotheses.  LLM-rank is a knowledge-only
-# comparators and are therefore excluded from the confirmatory family.
-PRIMARY_INFERENCE_VERSION = (
-    "hybrid_vs_six_data_only_paired_wilcoxon_holm6_v1"
-)
-PRIMARY_INFERENCE_STRATEGY = "Hybrid"
-PRIMARY_INFERENCE_COMPARATORS = (
-    "Random",
-    "GPR-UCB",
-    "RFR-UCB",
-    "GBDT-UCB",
-    "NN-UCB",
-    "Adaptive-UCB",
-)
-EXPLORATORY_INFERENCE_VERSION = (
-    "all_45_strategy_pairs_paired_wilcoxon_unadjusted_descriptive_v3"
-)
-
 # Default method settings. CLI overrides use a distinct output subdirectory.
-PRODUCTION_PROTOCOL = {
+DEFAULT_PROTOCOL = {
     "n_runs": 10,
     "candidate_pool_fraction": 1.0,
     "initial_fraction": INITIAL_FRACTION,
@@ -232,13 +198,15 @@ PRODUCTION_PROTOCOL = {
     "implementation_fingerprint_version": IMPLEMENTATION_FINGERPRINT_VERSION,
     "environment_fingerprint_version": ENVIRONMENT_FINGERPRINT_VERSION,
     "candidate_index_audit": CANDIDATE_INDEX_AUDIT_VERSION,
-    "seed": 42,
+    "seed": None,
+    "initialization": "paper_selected_runs",
+    "experiment": "benchmark",
+    "strategy_names": list(STRATEGY_NAMES),
+    "fixed_lambda": None,
     "feature_representation": "raw",
     "lam_llm": 0.6,
     "lambda_mode": LAMBDA_MODE_VERSION,
     "ewrc_gamma": 2.0,
-    "knowledge_score_control": "observed",
-    "knowledge_score_control_version": KNOWLEDGE_SCORE_CONTROL_VERSION,
     "knowledge_tie_break": KNOWLEDGE_TIE_BREAK_VERSION,
     "knowledge_tie_salt": KNOWLEDGE_TIE_SALT,
     "ucb_alpha": 1.96,
@@ -257,10 +225,7 @@ PRODUCTION_PROTOCOL = {
     "llm_scoring_model": DEFAULT_LLM_MODEL,
     "llm_api_base_url": DEFAULT_API_BASE_URL,
     "llm_scoring_temperature": LLM_SCORING_TEMPERATURE,
-    "llm_retrieval_top_k": LLM_RETRIEVAL_TOP_K,
-    "llm_use_hyde": LLM_USE_HYDE,
     "llm_retrieval_mode": LLM_RETRIEVAL_MODE,
-    "llm_retrieval_policy": LLM_RETRIEVAL_POLICY_VERSION,
     "dynamic_top_m_frac": 0.25,
     "dynamic_top_m_min_mult": 5,
     "dynamic_top_m_cap": 200,

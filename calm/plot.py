@@ -25,8 +25,8 @@ COLORS = {
     "Adaptive-UCB": "#8c564b",
     "LLM-rank": "#9467bd",
     "LLM-dynamic": "#bcbd22",
-    "Hybrid-static": "#e377c2",
-    "Hybrid": "#d62728",
+    "CALM-static": "#e377c2",
+    "CALM": "#d62728",
 }
 LINE_STYLES = {
     "Random": "--",
@@ -37,8 +37,8 @@ LINE_STYLES = {
     "Adaptive-UCB": "--",
     "LLM-rank": "-.",
     "LLM-dynamic": ":",
-    "Hybrid-static": "--",
-    "Hybrid": "-",
+    "CALM-static": "--",
+    "CALM": "-",
 }
 MARKERS = {
     "Random": "s",
@@ -49,8 +49,8 @@ MARKERS = {
     "Adaptive-UCB": "X",
     "LLM-rank": "v",
     "LLM-dynamic": "h",
-    "Hybrid-static": "P",
-    "Hybrid": "*",
+    "CALM-static": "P",
+    "CALM": "*",
 }
 
 

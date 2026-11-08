@@ -1,0 +1,121 @@
+"""Paired run identities used in the manuscript's descriptive nine-task cohort.
+
+The cohort includes post-hoc run selection; these are not preregistered seeds.
+Mg UTS uses master seed 20260902. The other tasks derive from master seed 42.
+Source run numbers retain the MPEA, Mg YS and Al UTS replacements.
+"""
+from __future__ import annotations
+
+import numpy as np
+
+PAPER_RUNS = {'Cu_alloys__EC': {'seeds': [1608637542,
+                             1273642419,
+                             1935803228,
+                             787846414,
+                             996406378,
+                             1201263687,
+                             423734972,
+                             415968276,
+                             670094950,
+                             1914837113],
+                   'source_run_numbers': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]},
+ 'HEA_Invar__TEC': {'seeds': [1608637542,
+                              1273642419,
+                              1935803228,
+                              787846414,
+                              996406378,
+                              1201263687,
+                              423734972,
+                              415968276,
+                              670094950,
+                              1914837113],
+                    'source_run_numbers': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]},
+ 'MPEA__UTS': {'seeds': [1608637542,
+                         1273642419,
+                         1935803228,
+                         787846414,
+                         996406378,
+                         1201263687,
+                         423734972,
+                         415968276,
+                         670094950,
+                         669991378],
+               'source_run_numbers': [1, 2, 3, 4, 5, 6, 7, 8, 9, 11]},
+ 'mg_alloy__UTS': {'seeds': [1782176804,
+                             1028655772,
+                             465679224,
+                             1114009941,
+                             678236246,
+                             1400879312,
+                             1283215481,
+                             1709079418,
+                             1324328782,
+                             78442560],
+                   'source_run_numbers': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]},
+ 'Ti_alloy__YS': {'seeds': [1608637542,
+                            1273642419,
+                            1935803228,
+                            787846414,
+                            996406378,
+                            1201263687,
+                            423734972,
+                            415968276,
+                            670094950,
+                            1914837113],
+                  'source_run_numbers': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]},
+ 'Ti_alloy__UTS': {'seeds': [1608637542,
+                             1273642419,
+                             1935803228,
+                             787846414,
+                             996406378,
+                             1201263687,
+                             423734972,
+                             415968276,
+                             670094950,
+                             1914837113],
+                   'source_run_numbers': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]},
+ 'mg_alloy__YS': {'seeds': [1608637542,
+                            1273642419,
+                            669991378,
+                            787846414,
+                            996406378,
+                            1201263687,
+                            423734972,
+                            415968276,
+                            670094950,
+                            1914837113],
+                  'source_run_numbers': [1, 2, 11, 4, 5, 6, 7, 8, 9, 10]},
+ '2xxx_T6__EL': {'seeds': [1608637542,
+                           1273642419,
+                           1935803228,
+                           787846414,
+                           996406378,
+                           1201263687,
+                           423734972,
+                           415968276,
+                           670094950,
+                           1914837113],
+                 'source_run_numbers': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]},
+ '2xxx_T6__UTS': {'seeds': [1608637542,
+                            1273642419,
+                            1935803228,
+                            787846414,
+                            996406378,
+                            1201263687,
+                            423734972,
+                            415968276,
+                            669991378,
+                            1914837113],
+                  'source_run_numbers': [1, 2, 3, 4, 5, 6, 7, 8, 11, 10]}}
+
+
+def paired_seeds(dataset: str, n_runs: int, *, seed: int | None = None) -> list[int]:
+    if n_runs < 1:
+        raise ValueError("n_runs must be positive")
+    if seed is not None:
+        rng = np.random.RandomState(seed)
+        return [int(rng.randint(0, 2**31 - 1)) for _ in range(n_runs)]
+    selected = PAPER_RUNS[dataset]["seeds"]
+    if n_runs > len(selected):
+        raise ValueError("The paper provides ten paired runs; use --seed for a new experiment.")
+    return list(selected[:n_runs])

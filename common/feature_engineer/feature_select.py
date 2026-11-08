@@ -1,7 +1,7 @@
 """小样本安全的确定性特征筛选。
 
 正式路径仅使用可观测协变量删除常量和高度冗余列，不使用目标值。
-可通过 ``select_features()`` 以编程方式调用，也可通过 ``main()`` CLI 使用。
+通过 ``select_features()`` 以编程方式调用。
 """
 
 from __future__ import annotations
@@ -12,35 +12,16 @@ from typing import Iterable
 
 import numpy as np
 import pandas as pd
-from lightgbm import LGBMRegressor
-from sklearn.feature_selection import mutual_info_regression
-from sklearn.impute import SimpleImputer
-from sklearn.inspection import permutation_importance
-from sklearn.model_selection import KFold
 
-# ── 默认常量 (CLI / 快速调用使用) ──────────────────────────────────
-DEFAULT_PROJECT = Path(__file__).resolve().parent.parent.parent
-DEFAULT_DATA_PATH = DEFAULT_PROJECT / "dabase" / "2xxx_mn_features_for_strength_tc.csv"
-DEFAULT_OUTPUT_DIR = DEFAULT_PROJECT / "dabase"
-DEFAULT_TARGETS = ["Strength", "TC"]
+# Deterministic, target-independent screening policy
 DEFAULT_DROP_COLS = ["Alloy"]
 # Feature removal must be dataset-specific and explicitly requested by callers.
 # In particular, Al is a meaningful alloying element outside Al-base datasets
 # and must not be silently removed by a shared feature-selection utility.
 FEATURE_SELECTION_POLICY_VERSION = "deterministic_unsupervised_pool_redundancy_v3"
 DEFAULT_FORCE_DROP_COLS: list[str] = []
-DEFAULT_FORCE_KEEP_COLS = [
-    "Al", "Cu", "Mg", "Mn", "Si", "Fe", "Cr", "Zn", "Ti", "Zr", "Ni", "Bi", "Pb",
-]
 
-# 超参（调优后基本不需改）
-VARIANCE_THRESHOLD = 1e-10
 CORR_THRESHOLD = 0.95
-KFOLD_SPLITS = 5
-PERM_N_REPEATS = 20
-TOP_K_PER_TARGET = 25
-IMPORTANCE_FREQ_THRESHOLD = 0.60
-RANDOM_STATE = 42
 
 # The publication path uses target-independent screening.  When
 # ``features_initial_fit.csv`` is accompanied by ``features_full_all_rows.csv``,
@@ -69,23 +50,9 @@ def _prepare_xy(df: pd.DataFrame, targets: Iterable[str],
     return x, y
 
 
-def _variance_filter(x: pd.DataFrame):
-    variances = x.var(axis=0, skipna=True)
-    keep = variances[variances > VARIANCE_THRESHOLD].index.tolist()
-    return x[keep].copy(), variances
-
-
 def _feature_group(column: str, force_keep_cols: Iterable[str]) -> str:
-    """Return a stable, human-readable feature family for audit reports."""
-    if column in set(force_keep_cols):
-        return "raw_input_anchor"
-    if str(column).startswith("MagpieData "):
-        return "magpie_descriptor"
-    if str(column).startswith("LLM_"):
-        return "llm_designed"
-    if str(column) in {"comp_entropy", "radius_mismatch"}:
-        return "physics_summary"
-    return "engineered_other"
+    """Identify protected raw inputs in the feature-selection audit."""
+    return "raw_input_anchor" if column in set(force_keep_cols) else "raw_input"
 
 
 def _load_unsupervised_screening_matrix(
@@ -224,13 +191,7 @@ def _representative_key(
     diagnostics: dict[str, dict],
 ) -> tuple:
     """Rank representatives without target values or input-column order."""
-    group_priority = {
-        "raw_input_anchor": 0,
-        "physics_summary": 1,
-        "magpie_descriptor": 2,
-        "llm_designed": 3,
-        "engineered_other": 4,
-    }
+    group_priority = {"raw_input_anchor": 0, "raw_input": 1}
     info = diagnostics[column]
     return (
         group_priority.get(groups[column], 99),
@@ -333,185 +294,6 @@ def _group_audit(
     }
 
 
-def _mi_scores(x: pd.DataFrame, y: pd.DataFrame, targets: list[str]):
-    imp = SimpleImputer(strategy="median")
-    x_imp = pd.DataFrame(imp.fit_transform(x), columns=x.columns, index=x.index)
-    score_df = pd.DataFrame(index=x.columns)
-    for t in targets:
-        mi = mutual_info_regression(x_imp, y[t], random_state=RANDOM_STATE)
-        score_df[f"mi_{t.lower()}"] = mi
-    score_df["mi_mean"] = score_df.mean(axis=1)
-    return score_df
-
-
-def _correlation_filter(x: pd.DataFrame, score_df: pd.DataFrame,
-                        force_keep_cols: list[str]):
-    corr = x.corr().abs()
-    cols = list(corr.columns)
-    to_drop: set[str] = set()
-    for i in range(len(cols)):
-        ci = cols[i]
-        if ci in to_drop:
-            continue
-        for j in range(i + 1, len(cols)):
-            cj = cols[j]
-            if cj in to_drop:
-                continue
-            if corr.loc[ci, cj] >= CORR_THRESHOLD:
-                ci_forced = ci in force_keep_cols
-                cj_forced = cj in force_keep_cols
-                if ci_forced and cj_forced:
-                    continue
-                if ci_forced and not cj_forced:
-                    to_drop.add(cj)
-                    continue
-                if cj_forced and not ci_forced:
-                    to_drop.add(ci)
-                    break
-                keep_ci = score_df.loc[ci, "mi_mean"] >= score_df.loc[cj, "mi_mean"]
-                to_drop.add(cj if keep_ci else ci)
-                if not keep_ci:
-                    break
-    kept = [c for c in cols if c not in to_drop]
-    return x[kept].copy(), sorted(to_drop)
-
-
-def _stability_selection_for_target(
-    x: pd.DataFrame, y_series: pd.Series, target_name: str,
-):
-    """Optional supervised selector with strict evidence gates.
-
-    The publication path no longer calls this function, but it remains
-    available for API compatibility and exploratory work.  A feature counts
-    in a fold only when its mean permutation importance is strictly positive
-    and greater than its repeat-level standard error.  Consequently an
-    all-zero importance vector can never be converted into an arbitrary top-k.
-    """
-    imp = SimpleImputer(strategy="median")
-    x_imp = pd.DataFrame(imp.fit_transform(x), columns=x.columns, index=x.index)
-    n_samples, n_features = x_imp.shape
-    if n_samples < 4 or n_features == 0:
-        empty = pd.Series(dtype=float)
-        zeros = pd.Series(0.0, index=x.columns, dtype=float)
-        empty.attrs["audit"] = {
-            "informative": False,
-            "reason": "insufficient_samples_or_features",
-            "n_samples": int(n_samples),
-            "n_features": int(n_features),
-            "n_splits": 0,
-        }
-        return empty, zeros, zeros.copy()
-
-    # Keep at least two validation observations and avoid training folds that
-    # are too small for a tree split.
-    n_splits = min(KFOLD_SPLITS, max(2, n_samples // 4))
-    n_splits = min(n_splits, n_samples // 2)
-    kf = KFold(n_splits=n_splits, shuffle=True, random_state=RANDOM_STATE)
-    freq = pd.Series(0.0, index=x.columns)
-    fold_imp_table = pd.DataFrame(
-        index=x.columns,
-        columns=range(n_splits),
-        dtype=float,
-    )
-    fold_noise_table = pd.DataFrame(
-        index=x.columns,
-        columns=range(n_splits),
-        dtype=float,
-    )
-    informative_folds = 0
-    adaptive_top_k: list[int] = []
-    adaptive_min_child_samples: list[int] = []
-
-    for fold_idx, (tr, va) in enumerate(kf.split(x_imp)):
-        x_tr, x_va = x_imp.iloc[tr], x_imp.iloc[va]
-        y_tr, y_va = y_series.iloc[tr], y_series.iloc[va]
-        if y_tr.nunique(dropna=True) < 2 or y_va.nunique(dropna=True) < 2:
-            fold_imp_table[fold_idx] = 0.0
-            fold_noise_table[fold_idx] = 0.0
-            adaptive_top_k.append(0)
-            adaptive_min_child_samples.append(0)
-            continue
-
-        min_child_samples = max(2, min(20, len(tr) // 5))
-        num_leaves = max(3, min(15, len(tr) // min_child_samples + 1))
-        model = LGBMRegressor(
-            objective="regression",
-            n_estimators=200,
-            learning_rate=0.05,
-            num_leaves=num_leaves,
-            min_child_samples=min_child_samples,
-            random_state=RANDOM_STATE,
-            deterministic=True,
-            force_col_wise=True,
-            n_jobs=1,
-            verbosity=-1,
-        )
-        model.fit(x_tr, y_tr)
-        result = permutation_importance(
-            model, x_va, y_va,
-            n_repeats=PERM_N_REPEATS, random_state=RANDOM_STATE,
-            scoring="r2", n_jobs=1,
-        )
-        fold_imp = pd.Series(
-            np.asarray(result.importances_mean, dtype=float),
-            index=x.columns,
-        ).replace([np.inf, -np.inf], np.nan).fillna(0.0)
-        repeat_std = pd.Series(
-            np.asarray(result.importances_std, dtype=float),
-            index=x.columns,
-        ).replace([np.inf, -np.inf], np.nan).fillna(np.inf)
-        noise_floor = repeat_std / np.sqrt(max(1, PERM_N_REPEATS))
-        fold_imp_table[fold_idx] = fold_imp
-        fold_noise_table[fold_idx] = noise_floor
-
-        eligible = fold_imp[
-            (fold_imp > 0.0)
-            & (fold_imp > noise_floor)
-        ].sort_values(ascending=False, kind="mergesort")
-        top_k = min(
-            TOP_K_PER_TARGET,
-            max(1, len(tr) // 3),
-            n_features,
-        )
-        topk = eligible.head(top_k).index
-        freq.loc[topk] += 1.0
-        adaptive_top_k.append(int(top_k))
-        adaptive_min_child_samples.append(int(min_child_samples))
-        if len(topk):
-            informative_folds += 1
-
-    freq = freq / n_splits
-    perm_mean = fold_imp_table.mean(axis=1)
-    perm_std = fold_imp_table.std(axis=1)
-
-    selected = freq[freq >= IMPORTANCE_FREQ_THRESHOLD].sort_values(ascending=False)
-    selected.attrs["audit"] = {
-        "informative": bool(len(selected)),
-        "reason": (
-            "strictly_positive_above_noise_features_found"
-            if len(selected)
-            else "no_feature_passed_positive_above_noise_gate"
-        ),
-        "n_samples": int(n_samples),
-        "n_features": int(n_features),
-        "n_splits": int(n_splits),
-        "informative_folds": int(informative_folds),
-        "adaptive_top_k_per_fold": adaptive_top_k,
-        "adaptive_min_child_samples_per_fold": adaptive_min_child_samples,
-        "importance_gate": "mean > 0 and mean > repeat_std/sqrt(n_repeats)",
-    }
-    perm_mean.attrs["fold_noise_floor_mean"] = {
-        c: float(v)
-        for c, v in fold_noise_table.mean(axis=1).items()
-    }
-    print(
-        f"[{target_name}] permutation-stability selected {len(selected)} features "
-        f"(freq>={IMPORTANCE_FREQ_THRESHOLD}, "
-        f"adaptive top-k over {n_splits} folds; positive-above-noise only)"
-    )
-    return selected, perm_mean, perm_std
-
-
 # ── 主入口 (可编程调用) ───────────────────────────────────────────
 
 def select_features(
@@ -528,7 +310,7 @@ def select_features(
 
     Parameters
     ----------
-    data_path: 全特征 CSV 路径 (feature_construct 产出).
+    data_path: 原始输入编码后的特征 CSV 路径。
     targets: 目标列名列表, 如 ``["Strength"]`` 或 ``["Strength", "TC"]``.
     force_keep_cols: 原始输入锚点列。若仅在初始集常量则保留；若全池常量则删除。
     force_drop_cols: 直接丢弃的列.
@@ -626,13 +408,7 @@ def select_features(
             "selected_features": selected_features,
             "selection_is_target_independent": True,
             "selected_via_unsupervised_screening": selected_features,
-            # Compatibility fields are intentionally empty: no permutation
-            # ranking is used by the publication path.
-            "selected_via_permutation": [],
             "selected_via_force_keep_only": sorted(force_keep_in_corr),
-            "stability_frequency": {},
-            "perm_importance_oof_mean_top": {},
-            "perm_importance_oof_std_top": {},
             "feature_groups": group_columns_after,
             **({"saved_csv": str(out_csv)} if output_dir is not None else {}),
         }
@@ -651,17 +427,6 @@ def select_features(
         "feature_selection_policy_version": FEATURE_SELECTION_POLICY_VERSION,
         "supervised_selector_used": False,
         "target_values_used_for_selection": False,
-        # Retain the legacy report keys for readers of older artifacts.  They
-        # describe the optional exploratory helper and are explicitly not
-        # active in this selection run.
-        "supervised_selector_config_status": (
-            "retained_for_compatibility_not_used"
-        ),
-        "perm_n_repeats": PERM_N_REPEATS,
-        "kfold_splits": KFOLD_SPLITS,
-        "stability_topk_per_target": TOP_K_PER_TARGET,
-        "stability_frequency_threshold": IMPORTANCE_FREQ_THRESHOLD,
-        "variance_threshold": VARIANCE_THRESHOLD,
         "screening_matrix": screening_audit,
         "constant_filter": {
             "test": "finite span <= 1e-12 + 1e-10 * max(1, abs(x))",
@@ -702,20 +467,3 @@ def select_features(
         print(f"[SAVE] {report_path}")
 
     return report
-
-
-# ── CLI ───────────────────────────────────────────────────────────
-
-def main():
-    """使用默认参数 (2xxx_mn, Strength+TC) 运行特征筛选."""
-    select_features(
-        data_path=DEFAULT_DATA_PATH,
-        targets=DEFAULT_TARGETS,
-        force_keep_cols=DEFAULT_FORCE_KEEP_COLS,
-        output_dir=DEFAULT_OUTPUT_DIR,
-        report_name="2xxx_mn_feature_selection_report.json",
-    )
-
-
-if __name__ == "__main__":
-    main()

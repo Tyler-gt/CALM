@@ -16,7 +16,7 @@ CANDIDATE_INDEX_AUDIT_VERSION = "explicit_initial_and_batch_indices_sha256_v1"
 _SOURCE_PATTERNS = (
     "calm/*.py", "calm/strategies/*.py", "common/*.py",
     "common/feature_engineer/*.py", "common/llm/*.py",
-    "common/nn_ensemble/*.py", "common/rag/*.py",
+    "common/nn_ensemble/*.py",
 )
 _REQUIRED_FILES = (
     "run.py", "requirements.txt", "calm/runner.py", "calm/data.py",
@@ -27,8 +27,7 @@ _REQUIRED_FILES = (
 )
 _PACKAGES = (
     "numpy", "pandas", "scipy", "scikit-learn", "lightgbm", "torch",
-    "matplotlib", "openpyxl", "openai", "python-dotenv", "matminer",
-    "pymatgen", "joblib",
+    "matplotlib", "openpyxl", "openai", "python-dotenv", "joblib",
 )
 
 

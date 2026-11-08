@@ -26,9 +26,6 @@ __pycache__/
 Thumbs.db
 
 # External inputs not included in this distribution
-dabase/FeCoNi__Magnetics.*
-dabase/MetallicGlass__Dmax.*
 dabase/MPEA__Mechanical.*
-dabase/steel_fatigue__Fatigue.*
 dabase/HEA_Invar__TEC.*
 dabase/external_datasets/

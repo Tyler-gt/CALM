@@ -10,16 +10,16 @@ from calm.experiment import (
     LLM_DYNAMIC_SHORTLIST_POLICY_VERSION,
 )
 
-from .hybrid import HybridAcquisition
+from .calm import CALMAcquisition
 
 
-class LLMDynamic(HybridAcquisition):
+class LLMDynamic(CALMAcquisition):
     """Static knowledge plus feedback-updated LLM ranking, without UCB.
 
-    The strategy intentionally reuses Hybrid's audited persistent M1, feedback,
+    The strategy intentionally reuses CALM's persistent M1, feedback,
     checkpoint, and static rank-slot machinery. It never fits or queries a
     surrogate. Shortlists are formed from static full-pool knowledge ranks plus
-    a pre-registered random exploration quota, so no prediction mean,
+    a fixed random exploration quota, so no prediction mean,
     uncertainty, UCB, EWRC, or adaptive lambda can affect acquisition.
     """
 

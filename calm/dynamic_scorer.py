@@ -61,7 +61,6 @@ class DynamicLLMScorer:
         target_col: str = "target_property",
         objective_direction: str = "maximize",
         forbidden_target_cols: list[str] | None = None,
-        top_k: int = 5,
         anchor_best_k: int = 3,
         anchor_worst_k: int = 2,
         anchor_nearby_k: int = 3,
@@ -105,7 +104,6 @@ class DynamicLLMScorer:
         self.objective_direction = validate_objective_direction(
             objective_direction
         )
-        self.top_k = top_k
         self.anchor_best_k = max(0, int(anchor_best_k))
         self.anchor_worst_k = max(0, int(anchor_worst_k))
         self.anchor_nearby_k = max(0, int(anchor_nearby_k))
@@ -116,7 +114,7 @@ class DynamicLLMScorer:
         )
         self.audit_path = Path(audit_path) if audit_path is not None else None
         self._run_index: int | None = None
-        self._strategy_name = "Hybrid"
+        self._strategy_name = "CALM"
         self._seen_audit_ids: set[str] = set()
         self._source_evidence_ids: dict[tuple[str, int], str] = {}
         self._last_anchor_manifest: list[dict] = []
@@ -174,7 +172,7 @@ class DynamicLLMScorer:
                 os.fsync(stream.fileno())
             tmp.replace(self.audit_path)
 
-    def set_run_context(self, run_index: int, strategy_name: str = "Hybrid") -> None:
+    def set_run_context(self, run_index: int, strategy_name: str = "CALM") -> None:
         self._run_index = int(run_index)
         self._strategy_name = str(strategy_name)
 

@@ -1,6 +1,6 @@
 """Strategy NN-UCB: fixed lightweight MC Dropout MLP + UCB.
 
-This is the fixed-surrogate control; Adaptive-UCB is Hybrid's matched primary
+This is the fixed-surrogate control; Adaptive-UCB is CALM's matched
 data-only ablation.
 """
 
@@ -9,10 +9,10 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 
-from .hybrid import HybridAcquisition
+from .calm import CALMAcquisition
 
 
-class NNUCB(HybridAcquisition):
+class NNUCB(CALMAcquisition):
     """MC Dropout MLP-UCB — 纯数据驱动, 无 LLM 知识门控.
 
     覆盖 fit() 强制锁定 NN 代理模型, 覆盖 select_next() 跳过 LLM 评分.

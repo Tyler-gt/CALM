@@ -8,7 +8,6 @@ import hashlib
 import json
 import math
 import os
-import shutil
 import sys
 import time
 from collections import Counter
@@ -43,8 +42,6 @@ from calm.experiment import (
     ANCHOR_WORST_K,
     CANDIDATE_MEMORY_POLICY_VERSION,
     CANDIDATE_MEMORY_PREFILTER_K,
-    COMPATIBLE_FEATURE_CACHE_EXPERIMENTS,
-    COMPATIBLE_LLM_CACHE_EXPERIMENTS,
     DYNAMIC_FEEDBACK_POLICY_VERSION,
     DYNAMIC_EVIDENCE_FILENAMES,
     DYNAMIC_PREQUERY_LEDGER_VERSION,
@@ -53,7 +50,6 @@ from calm.experiment import (
     DATASET_KEY_ALLOCATION_VERSION,
     DATASET_QUEUE_MAX_WORKERS,
     DATASET_QUEUE_ORDER_VERSION,
-    KNOWLEDGE_SCORE_CONTROL_VERSION,
     EXPERIMENT_VERSION,
     ITERATION_CHECKPOINT_VERSION,
     KNOWLEDGE_TIE_BREAK_VERSION,
@@ -61,21 +57,14 @@ from calm.experiment import (
     LLM_EVIDENCE_VERSION,
     LLM_KEY_SCHEDULER_VERSION,
     LLM_DYNAMIC_SHORTLIST_POLICY_VERSION,
-    LLM_RETRIEVAL_POLICY_VERSION,
     LLM_RETRIEVAL_MODE,
-    LLM_RETRIEVAL_TOP_K,
     LLM_RETRY_POLICY_VERSION,
     LLM_API_BASE_URL,
     LLM_SCORING_MODEL,
     LLM_SCORING_PROMPT_VERSION,
     LLM_SCORING_TEMPERATURE,
-    LLM_USE_HYDE,
     OUTPUT_DIR,
-    EXPLORATORY_INFERENCE_VERSION,
-    PRIMARY_INFERENCE_COMPARATORS,
-    PRIMARY_INFERENCE_STRATEGY,
-    PRIMARY_INFERENCE_VERSION,
-    PRODUCTION_PROTOCOL,
+    DEFAULT_PROTOCOL,
     REGRET_AUC_VERSION,
     RESOURCE_ALLOCATION_POLICY_VERSION,
     STRATEGY_NAMES,
@@ -85,6 +74,7 @@ from calm.experiment import (
     SURROGATE_SIGMA_CALIBRATION_VERSION,
     resolve_resource_allocation,
 )
+from calm.benchmark import PAPER_RUNS, paired_seeds
 from calm.metrics import compute_stats
 from calm.plot import plot_convergence
 from calm.reproducibility import (
@@ -109,55 +99,56 @@ from calm.strategies.nn_ucb import NNUCB
 from calm.strategies.adaptive_ucb import AdaptiveUCB
 from calm.strategies.llm_rank import LLMRank
 from calm.strategies.llm_dynamic import LLMDynamic
-from calm.strategies.hybrid import HybridAcquisition
-from calm.strategies.hybrid_static import HybridStatic
+from calm.strategies.calm import CALMAcquisition
+from calm.strategies.calm_static import CALMStatic
 from common.llm.key_pool import AsyncUSTCKeyPool, require_ustc_api_keys
 
 EXTERNAL = PROJECT / "dabase"
 CURATED = EXTERNAL / "curated"
-N_RUNS = int(PRODUCTION_PROTOCOL["n_runs"])
-INITIAL_LABELED_FRACTION = float(PRODUCTION_PROTOCOL["initial_fraction"])
-BATCH_QUERY_FRACTION = float(PRODUCTION_PROTOCOL["batch_fraction"])
+N_RUNS = int(DEFAULT_PROTOCOL["n_runs"])
+INITIAL_LABELED_FRACTION = float(DEFAULT_PROTOCOL["initial_fraction"])
+BATCH_QUERY_FRACTION = float(DEFAULT_PROTOCOL["batch_fraction"])
 TOTAL_LABELED_BUDGET_FRACTION = float(
-    PRODUCTION_PROTOCOL["total_budget_fraction"]
+    DEFAULT_PROTOCOL["total_budget_fraction"]
 )
-SEED = int(PRODUCTION_PROTOCOL["seed"])
-FEATURE_REPRESENTATION = str(PRODUCTION_PROTOCOL["feature_representation"])
-LAM_LLM = float(PRODUCTION_PROTOCOL["lam_llm"])
-EWRC_GAMMA = float(PRODUCTION_PROTOCOL["ewrc_gamma"])
-KNOWLEDGE_SCORE_CONTROL = str(PRODUCTION_PROTOCOL["knowledge_score_control"])
-UCB_ALPHA = float(PRODUCTION_PROTOCOL["ucb_alpha"])
-ENSEMBLE_MIN_TRAIN_SAMPLES = int(PRODUCTION_PROTOCOL["ensemble_min_train_samples"])
+SEED: int | None = None
+EXPERIMENT_MODE = "benchmark"
+FIXED_LAMBDA: float | None = None
+FEATURE_REPRESENTATION = str(DEFAULT_PROTOCOL["feature_representation"])
+LAM_LLM = float(DEFAULT_PROTOCOL["lam_llm"])
+EWRC_GAMMA = float(DEFAULT_PROTOCOL["ewrc_gamma"])
+UCB_ALPHA = float(DEFAULT_PROTOCOL["ucb_alpha"])
+ENSEMBLE_MIN_TRAIN_SAMPLES = int(DEFAULT_PROTOCOL["ensemble_min_train_samples"])
 ENSEMBLE_WEIGHT_UPDATE_SAMPLES = int(
-    PRODUCTION_PROTOCOL["ensemble_weight_update_samples"]
+    DEFAULT_PROTOCOL["ensemble_weight_update_samples"]
 )
-ENSEMBLE_WEIGHT_FLOOR = float(PRODUCTION_PROTOCOL["ensemble_weight_floor"])
+ENSEMBLE_WEIGHT_FLOOR = float(DEFAULT_PROTOCOL["ensemble_weight_floor"])
 ENSEMBLE_WEIGHT_TEMPERATURE = float(
-    PRODUCTION_PROTOCOL["ensemble_weight_temperature"]
+    DEFAULT_PROTOCOL["ensemble_weight_temperature"]
 )
 ENSEMBLE_TOP_WEIGHT_STRENGTH = float(
-    PRODUCTION_PROTOCOL["ensemble_top_weight_strength"]
+    DEFAULT_PROTOCOL["ensemble_top_weight_strength"]
 )
-GBDT_BOOTSTRAP_MODELS = int(PRODUCTION_PROTOCOL["gbdt_bootstrap_models"])
+GBDT_BOOTSTRAP_MODELS = int(DEFAULT_PROTOCOL["gbdt_bootstrap_models"])
 SURROGATE_SIGMA_CALIBRATION = str(
-    PRODUCTION_PROTOCOL["surrogate_sigma_calibration"]
+    DEFAULT_PROTOCOL["surrogate_sigma_calibration"]
 )
-RESCORING_INTERVAL = int(PRODUCTION_PROTOCOL["rescoring_interval"])
-DYNAMIC_TOP_M_FRAC = float(PRODUCTION_PROTOCOL["dynamic_top_m_frac"])
-DYNAMIC_TOP_M_MIN_MULT = int(PRODUCTION_PROTOCOL["dynamic_top_m_min_mult"])
-DYNAMIC_TOP_M_CAP = int(PRODUCTION_PROTOCOL["dynamic_top_m_cap"])
-DYNAMIC_RANDOM_FRAC = float(PRODUCTION_PROTOCOL["dynamic_random_frac"])
-LLM_RETRY_UNTIL_SUCCESS = bool(PRODUCTION_PROTOCOL["llm_retry_until_success"])
-LLM_STRICT_SCORING = bool(PRODUCTION_PROTOCOL["llm_strict_scoring"])
-LLM_MAX_CONCURRENCY = int(PRODUCTION_PROTOCOL["llm_max_concurrency"])
-LLM_API_KEY_COUNT = int(PRODUCTION_PROTOCOL["llm_api_key_count"])
-LLM_PER_KEY_CONCURRENCY = int(PRODUCTION_PROTOCOL["llm_per_key_concurrency"])
-LLM_RATE_LIMIT_BATCH_SIZE = int(PRODUCTION_PROTOCOL["llm_rate_limit_batch_size"])
+RESCORING_INTERVAL = int(DEFAULT_PROTOCOL["rescoring_interval"])
+DYNAMIC_TOP_M_FRAC = float(DEFAULT_PROTOCOL["dynamic_top_m_frac"])
+DYNAMIC_TOP_M_MIN_MULT = int(DEFAULT_PROTOCOL["dynamic_top_m_min_mult"])
+DYNAMIC_TOP_M_CAP = int(DEFAULT_PROTOCOL["dynamic_top_m_cap"])
+DYNAMIC_RANDOM_FRAC = float(DEFAULT_PROTOCOL["dynamic_random_frac"])
+LLM_RETRY_UNTIL_SUCCESS = bool(DEFAULT_PROTOCOL["llm_retry_until_success"])
+LLM_STRICT_SCORING = bool(DEFAULT_PROTOCOL["llm_strict_scoring"])
+LLM_MAX_CONCURRENCY = int(DEFAULT_PROTOCOL["llm_max_concurrency"])
+LLM_API_KEY_COUNT = int(DEFAULT_PROTOCOL["llm_api_key_count"])
+LLM_PER_KEY_CONCURRENCY = int(DEFAULT_PROTOCOL["llm_per_key_concurrency"])
+LLM_RATE_LIMIT_BATCH_SIZE = int(DEFAULT_PROTOCOL["llm_rate_limit_batch_size"])
 LLM_RATE_LIMIT_SLEEP_SECONDS = float(
-    PRODUCTION_PROTOCOL["llm_rate_limit_sleep_seconds"]
+    DEFAULT_PROTOCOL["llm_rate_limit_sleep_seconds"]
 )
-LLM_RETRY_BASE_SECONDS = float(PRODUCTION_PROTOCOL["llm_retry_base_seconds"])
-LLM_RETRY_MAX_SECONDS = float(PRODUCTION_PROTOCOL["llm_retry_max_seconds"])
+LLM_RETRY_BASE_SECONDS = float(DEFAULT_PROTOCOL["llm_retry_base_seconds"])
+LLM_RETRY_MAX_SECONDS = float(DEFAULT_PROTOCOL["llm_retry_max_seconds"])
 API_KEY_SLOT = 1
 STRATEGY_SEED_OFFSETS = {
     "Random": 101,
@@ -165,12 +156,12 @@ STRATEGY_SEED_OFFSETS = {
     "RFR-UCB": 307,
     "GBDT-UCB": 401,
     "NN-UCB": 503,
-    # Matched common-random-number pair with Hybrid.
+    # Matched common-random-number pair with CALM.
     "Adaptive-UCB": 701,
     "LLM-rank": 601,
     "LLM-dynamic": 701,
-    "Hybrid-static": 701,
-    "Hybrid": 701,
+    "CALM-static": 701,
+    "CALM": 701,
 }
 
 
@@ -242,10 +233,6 @@ def _detect_columns(
     )
 
 
-FECONI_PROPERTIES = (
-    "Coercivity_mT",
-    "Kerr_rotation_mrad",
-)
 MPEA_PROPERTIES = (
     "Grain_size_um",
     "Experimental_density_g_cm3",
@@ -264,27 +251,7 @@ MPEA_PROPERTIES = (
 
 
 DATASETS: dict[str, DatasetConfig] = {
-    "2xxx_T6__UTS": DatasetConfig(
-        name="2xxx_T6__UTS",
-        xlsx_path=CURATED / "al_alloys.csv",
-        target_col="UTS",
-        composition_unit="wt.%",
-        objective_direction="maximize",
-        target_label="UTS", target_unit="MPa",
-        material_system="Al-alloy",
-        expected_target_valid_rows=138,
-    ),
-    "2xxx_T6__EL": DatasetConfig(
-        name="2xxx_T6__EL",
-        xlsx_path=CURATED / "al_alloys.csv",
-        target_col="EL",
-        composition_unit="wt.%",
-        objective_direction="maximize",
-        target_label="EL", target_unit="%",
-        material_system="Al-alloy",
-        expected_target_valid_rows=134,
-    ),
-    "Cu_alloys__EC": DatasetConfig(
+    'Cu_alloys__EC': DatasetConfig(
         name="Cu_alloys__EC",
         xlsx_path=CURATED / "Cu_alloys__EC.csv",
         target_col="Electrical_conductivity_pctIACS",
@@ -294,127 +261,7 @@ DATASETS: dict[str, DatasetConfig] = {
         material_system="Cu-alloy",
         expected_target_valid_rows=1486,
     ),
-    "mg_alloy__UTS": DatasetConfig(
-        name="mg_alloy__UTS",
-        xlsx_path=CURATED / "mg_alloy__UTS.csv",
-        target_col="UTS_MPa",
-        composition_unit="wt.%",
-        objective_direction="maximize",
-        target_label="UTS", target_unit="MPa",
-        material_system="Mg-alloy",
-        expected_target_valid_rows=289,
-    ),
-    "mg_alloy__YS": DatasetConfig(
-        name="mg_alloy__YS",
-        xlsx_path=CURATED / "mg_alloy__YS.csv",
-        target_col="YS_MPa",
-        composition_unit="wt.%",
-        objective_direction="maximize",
-        target_label="YS", target_unit="MPa",
-        material_system="Mg-alloy",
-        expected_target_valid_rows=298,
-    ),
-    "steel__UTS": DatasetConfig(
-        name="steel__UTS",
-        xlsx_path=CURATED / "steel__UTS.csv",
-        target_col="Ultimate_Tensile_Strength_MPa",
-        composition_unit="wt.%",
-        objective_direction="maximize",
-        target_label="UTS", target_unit="MPa",
-        material_system="Steel",
-        additional_property_cols=(
-            "Microstructure",
-            "Grain_size_um",
-            "Yield_Strength_MPa",
-            "Uniform_Elongation_percent",
-            "Total_Elongation_percent",
-        ),
-        composition_missing_policy=REPORTED_COMPOSITION_POLICY,
-        expected_target_valid_rows=272,
-    ),
-    "steel_fatigue__Fatigue": DatasetConfig(
-        name="steel_fatigue__Fatigue",
-        xlsx_path=EXTERNAL / "steel_fatigue__Fatigue.csv",
-        target_col="Fatigue",
-        composition_unit="wt.%",
-        objective_direction="maximize",
-        objective_description=(
-            "Maximize rotating-bending fatigue strength at 10^7 cycles for "
-            "NIMS steels. NT is normalizing temperature; THT/THt/THQCr are "
-            "through-hardening temperature/time/cooling rate; CT/Ct are "
-            "carburization temperature/time; DT/Dt are diffusion "
-            "temperature/time; QmT is quenching-media temperature; TT/Tt/TCr "
-            "are tempering temperature/time/cooling rate; RedRatio is the "
-            "ingot-to-bar reduction ratio; dA/dB/dC are inclusion-area "
-            "proportions. A zero THt, Ct, or Tt means that process stage was "
-            "not applied, so its paired filled temperature must not be "
-            "interpreted independently."
-        ),
-        target_label="Fatigue strength",
-        target_unit="MPa",
-        material_system="NIMS carbon, low-alloy, carburizing, and spring steels",
-        composition_missing_policy=REPORTED_COMPOSITION_POLICY,
-        expected_target_valid_rows=437,
-    ),
-    "Ti_alloy__UTS": DatasetConfig(
-        name="Ti_alloy__UTS",
-        xlsx_path=CURATED / "Ti_alloy__UTS.csv",
-        target_col="UTS_MPa",
-        composition_unit="at.%",
-        objective_direction="maximize",
-        target_label="UTS", target_unit="MPa",
-        material_system="Ti-alloy",
-        additional_property_cols=("moe",),
-        expected_target_valid_rows=185,
-    ),
-    "Ti_alloy__YS": DatasetConfig(
-        name="Ti_alloy__YS",
-        xlsx_path=CURATED / "Ti_alloy__YS.csv",
-        target_col="YS_MPa",
-        composition_unit="at.%",
-        objective_direction="maximize",
-        target_label="YS", target_unit="MPa",
-        material_system="Ti-alloy",
-        additional_property_cols=("moe",),
-        expected_target_valid_rows=248,
-    ),
-    # External diversity expansion: primary tasks.
-    "FeCoNi__Coercivity": DatasetConfig(
-        name="FeCoNi__Coercivity",
-        xlsx_path=EXTERNAL / "FeCoNi__Magnetics.csv",
-        target_col="Coercivity_mT",
-        composition_unit="at.%",
-        objective_direction="minimize",
-        objective_description=(
-            "Discover low-coercivity Fe-Co-Ni soft-magnetic compositions."
-        ),
-        target_label="Coercivity", target_unit="mT",
-        material_system="Fe-Co-Ni combinatorial thin-film alloy",
-        additional_property_cols=FECONI_PROPERTIES,
-        expected_target_valid_rows=921,
-    ),
-    "FeCoNi__Kerr": DatasetConfig(
-        name="FeCoNi__Kerr",
-        xlsx_path=EXTERNAL / "FeCoNi__Magnetics.csv",
-        target_col="Kerr_rotation_mrad",
-        composition_unit="at.%",
-        objective_direction="maximize",
-        target_label="Kerr rotation", target_unit="mrad",
-        material_system="Fe-Co-Ni combinatorial thin-film alloy",
-        additional_property_cols=FECONI_PROPERTIES,
-        expected_target_valid_rows=921,
-    ),
-    "MetallicGlass__Dmax": DatasetConfig(
-        name="MetallicGlass__Dmax",
-        xlsx_path=EXTERNAL / "MetallicGlass__Dmax.csv",
-        target_col="Dmax_mm",
-        composition_unit="at.%",
-        objective_direction="maximize",
-        target_label="Dmax", target_unit="mm",
-        material_system="Metallic glass",
-        expected_target_valid_rows=747,
-    ),
-    "HEA_Invar__TEC": DatasetConfig(
+    'HEA_Invar__TEC': DatasetConfig(
         name="HEA_Invar__TEC",
         xlsx_path=EXTERNAL / "HEA_Invar__TEC.csv",
         target_col="TEC_1e-6_K-1",
@@ -429,30 +276,7 @@ DATASETS: dict[str, DatasetConfig] = {
         material_system="Fe-Ni-Co-Cr-V-Cu high-entropy Invar alloy",
         expected_target_valid_rows=709,
     ),
-    "MPEA__YS": DatasetConfig(
-        name="MPEA__YS",
-        xlsx_path=EXTERNAL / "MPEA__Mechanical.csv",
-        target_col="YS_MPa",
-        composition_unit="at.%",
-        objective_direction="maximize",
-        target_label="YS", target_unit="MPa",
-        material_system="Multi-principal-element alloy",
-        additional_property_cols=MPEA_PROPERTIES,
-        expected_target_valid_rows=760,
-    ),
-    # External diversity expansion: supplementary/robustness tasks.
-    "MPEA__Hardness": DatasetConfig(
-        name="MPEA__Hardness",
-        xlsx_path=EXTERNAL / "MPEA__Mechanical.csv",
-        target_col="Hardness_HV",
-        composition_unit="at.%",
-        objective_direction="maximize",
-        target_label="Hardness", target_unit="HV",
-        material_system="Multi-principal-element alloy",
-        additional_property_cols=MPEA_PROPERTIES,
-        expected_target_valid_rows=463,
-    ),
-    "MPEA__UTS": DatasetConfig(
+    'MPEA__UTS': DatasetConfig(
         name="MPEA__UTS",
         xlsx_path=EXTERNAL / "MPEA__Mechanical.csv",
         target_col="UTS_MPa",
@@ -463,16 +287,67 @@ DATASETS: dict[str, DatasetConfig] = {
         additional_property_cols=MPEA_PROPERTIES,
         expected_target_valid_rows=362,
     ),
-    "MPEA__Elongation": DatasetConfig(
-        name="MPEA__Elongation",
-        xlsx_path=EXTERNAL / "MPEA__Mechanical.csv",
-        target_col="Elongation_percent",
+    'mg_alloy__UTS': DatasetConfig(
+        name="mg_alloy__UTS",
+        xlsx_path=CURATED / "mg_alloy__UTS.csv",
+        target_col="UTS_MPa",
+        composition_unit="wt.%",
+        objective_direction="maximize",
+        target_label="UTS", target_unit="MPa",
+        material_system="Mg-alloy",
+        expected_target_valid_rows=289,
+    ),
+    'Ti_alloy__YS': DatasetConfig(
+        name="Ti_alloy__YS",
+        xlsx_path=CURATED / "Ti_alloy__YS.csv",
+        target_col="YS_MPa",
         composition_unit="at.%",
         objective_direction="maximize",
-        target_label="Elongation", target_unit="%",
-        material_system="Multi-principal-element alloy",
-        additional_property_cols=MPEA_PROPERTIES,
-        expected_target_valid_rows=424,
+        target_label="YS", target_unit="MPa",
+        material_system="Ti-alloy",
+        additional_property_cols=("moe",),
+        expected_target_valid_rows=248,
+    ),
+    'Ti_alloy__UTS': DatasetConfig(
+        name="Ti_alloy__UTS",
+        xlsx_path=CURATED / "Ti_alloy__UTS.csv",
+        target_col="UTS_MPa",
+        composition_unit="at.%",
+        objective_direction="maximize",
+        target_label="UTS", target_unit="MPa",
+        material_system="Ti-alloy",
+        additional_property_cols=("moe",),
+        expected_target_valid_rows=185,
+    ),
+    'mg_alloy__YS': DatasetConfig(
+        name="mg_alloy__YS",
+        xlsx_path=CURATED / "mg_alloy__YS.csv",
+        target_col="YS_MPa",
+        composition_unit="wt.%",
+        objective_direction="maximize",
+        target_label="YS", target_unit="MPa",
+        material_system="Mg-alloy",
+        expected_target_valid_rows=298,
+    ),
+    '2xxx_T6__EL': DatasetConfig(
+        name="2xxx_T6__EL",
+        xlsx_path=CURATED / "al_alloys.csv",
+        target_col="EL",
+        composition_unit="wt.%",
+        objective_direction="maximize",
+        target_label="EL", target_unit="%",
+        material_system="Al-alloy",
+        expected_target_valid_rows=134,
+    ),
+    '2xxx_T6__UTS': DatasetConfig(
+        name="2xxx_T6__UTS",
+        xlsx_path=CURATED / "al_alloys.csv",
+        target_col="UTS",
+        composition_unit="wt.%",
+        objective_direction="maximize",
+        target_label="UTS", target_unit="MPa",
+        material_system="Al-alloy",
+        expected_target_valid_rows=138,
     ),
 }
 
@@ -503,32 +378,41 @@ def build_strategies() -> list:
         "ensemble_top_weight_strength": ENSEMBLE_TOP_WEIGHT_STRENGTH,
         "gbdt_bootstrap_models": GBDT_BOOTSTRAP_MODELS,
     }
-    return [
-        RandomBaseline(),
-        GPRUCB(alpha=UCB_ALPHA),
+    calm = CALMAcquisition(
+        alpha=UCB_ALPHA, lam_llm=LAM_LLM,
+        extreme_rank_power=EWRC_GAMMA, fixed_lambda=FIXED_LAMBDA,
+        **ensemble_kwargs,
+    )
+    if EXPERIMENT_MODE not in {"benchmark", "supplementary"}:
+        return [calm]
+    strategies = [
+        RandomBaseline(), GPRUCB(alpha=UCB_ALPHA),
         RFRUCB(alpha=UCB_ALPHA, n_estimators=200),
-        GBDTUCB(
-            alpha=UCB_ALPHA,
-            n_estimators=300,
-            n_bootstrap_models=GBDT_BOOTSTRAP_MODELS,
-        ),
+        GBDTUCB(alpha=UCB_ALPHA, n_estimators=300,
+                n_bootstrap_models=GBDT_BOOTSTRAP_MODELS),
         NNUCB(alpha=UCB_ALPHA),
         AdaptiveUCB(alpha=UCB_ALPHA, lam_llm=0.0, **ensemble_kwargs),
-        LLMRank(),
-        LLMDynamic(),
-        HybridStatic(
-            alpha=UCB_ALPHA,
-            lam_llm=LAM_LLM,
-            extreme_rank_power=EWRC_GAMMA,
-            **ensemble_kwargs,
-        ),
-        HybridAcquisition(
-            alpha=UCB_ALPHA,
-            lam_llm=LAM_LLM,
-            extreme_rank_power=EWRC_GAMMA,
-            **ensemble_kwargs,
-        ),
+        LLMRank(), LLMDynamic(),
     ]
+    if EXPERIMENT_MODE == "supplementary":
+        strategies.append(CALMStatic(
+            alpha=UCB_ALPHA, lam_llm=LAM_LLM,
+            extreme_rank_power=EWRC_GAMMA, **ensemble_kwargs,
+        ))
+    return [*strategies, calm]
+
+
+def _active_strategy_names() -> tuple[str, ...]:
+    if EXPERIMENT_MODE == "benchmark":
+        return STRATEGY_NAMES
+    if EXPERIMENT_MODE == "supplementary":
+        return (*STRATEGY_NAMES[:-1], "CALM-static", "CALM")
+    return ("CALM",)
+
+
+def _active_dynamic_names() -> tuple[str, ...]:
+    return tuple(name for name in DYNAMIC_STRATEGY_NAMES
+                 if name in _active_strategy_names())
 
 
 def _strategy_seed(run_seed: int, strategy_name: str) -> int:
@@ -551,169 +435,27 @@ def _resolve_resources(n_samples: int) -> dict[str, int]:
 
 def _runtime_protocol() -> dict:
     return {
+        **DEFAULT_PROTOCOL,
         "n_runs": N_RUNS,
-        "candidate_pool_fraction": 1.0,
         "initial_fraction": INITIAL_LABELED_FRACTION,
         "batch_fraction": BATCH_QUERY_FRACTION,
         "total_budget_fraction": TOTAL_LABELED_BUDGET_FRACTION,
-        "resource_allocation_policy": RESOURCE_ALLOCATION_POLICY_VERSION,
-        "objective_direction_contract": OBJECTIVE_DIRECTION_CONTRACT_VERSION,
-        "regret_auc_version": REGRET_AUC_VERSION,
-        "stopping_policy": STOPPING_POLICY_VERSION,
-        "iteration_checkpoint": ITERATION_CHECKPOINT_VERSION,
-        "implementation_fingerprint_version": PRODUCTION_PROTOCOL[
-            "implementation_fingerprint_version"
-        ],
-        "environment_fingerprint_version": PRODUCTION_PROTOCOL[
-            "environment_fingerprint_version"
-        ],
-        "candidate_index_audit": CANDIDATE_INDEX_AUDIT_VERSION,
         "seed": SEED,
-        "feature_representation": FEATURE_REPRESENTATION,
-        "lam_llm": LAM_LLM,
-        "lambda_mode": PRODUCTION_PROTOCOL["lambda_mode"],
+        "initialization": "paper_selected_runs" if SEED is None else "new_seed_runs",
+        "experiment": EXPERIMENT_MODE,
+        "strategy_names": list(_active_strategy_names()),
+        "fixed_lambda": FIXED_LAMBDA,
+        "lambda_mode": "fixed" if FIXED_LAMBDA is not None else DEFAULT_PROTOCOL["lambda_mode"],
         "ewrc_gamma": EWRC_GAMMA,
-        "knowledge_score_control": KNOWLEDGE_SCORE_CONTROL,
-        "knowledge_score_control_version": KNOWLEDGE_SCORE_CONTROL_VERSION,
-        "knowledge_tie_break": KNOWLEDGE_TIE_BREAK_VERSION,
-        "knowledge_tie_salt": KNOWLEDGE_TIE_SALT,
-        "ucb_alpha": UCB_ALPHA,
-        "surrogate_policy": SURROGATE_POLICY_VERSION,
-        "nn_surrogate": PRODUCTION_PROTOCOL["nn_surrogate"],
-        "surrogate_sigma_calibration": SURROGATE_SIGMA_CALIBRATION,
-        "ensemble_min_train_samples": ENSEMBLE_MIN_TRAIN_SAMPLES,
-        "ensemble_weight_update_samples": ENSEMBLE_WEIGHT_UPDATE_SAMPLES,
-        "ensemble_weight_floor": ENSEMBLE_WEIGHT_FLOOR,
-        "ensemble_weight_temperature": ENSEMBLE_WEIGHT_TEMPERATURE,
-        "ensemble_top_weight_strength": ENSEMBLE_TOP_WEIGHT_STRENGTH,
-        "gbdt_bootstrap_models": GBDT_BOOTSTRAP_MODELS,
         "rescoring_interval": RESCORING_INTERVAL,
-        "llm_scoring_prompt": LLM_SCORING_PROMPT_VERSION,
-        "llm_evidence_version": LLM_EVIDENCE_VERSION,
         "llm_scoring_model": LLM_SCORING_MODEL,
         "llm_api_base_url": LLM_API_BASE_URL,
-        "llm_scoring_temperature": LLM_SCORING_TEMPERATURE,
-        "llm_retrieval_top_k": LLM_RETRIEVAL_TOP_K,
-        "llm_use_hyde": LLM_USE_HYDE,
-        "llm_retrieval_mode": LLM_RETRIEVAL_MODE,
-        "llm_retrieval_policy": LLM_RETRIEVAL_POLICY_VERSION,
-        "dynamic_top_m_frac": DYNAMIC_TOP_M_FRAC,
-        "dynamic_top_m_min_mult": DYNAMIC_TOP_M_MIN_MULT,
-        "dynamic_top_m_cap": DYNAMIC_TOP_M_CAP,
-        "dynamic_random_frac": DYNAMIC_RANDOM_FRAC,
-        "dynamic_rank_fusion": PRODUCTION_PROTOCOL["dynamic_rank_fusion"],
-        "llm_dynamic_shortlist_policy": LLM_DYNAMIC_SHORTLIST_POLICY_VERSION,
-        "dynamic_strategy_names": list(DYNAMIC_STRATEGY_NAMES),
-        "dynamic_evidence_files": dict(DYNAMIC_EVIDENCE_FILENAMES),
-        "dynamic_rescoring_cache": DYNAMIC_RESCORING_CACHE_VERSION,
-        "dynamic_feedback_policy": DYNAMIC_FEEDBACK_POLICY_VERSION,
-        "candidate_memory_policy": CANDIDATE_MEMORY_POLICY_VERSION,
-        "candidate_memory_prefilter_k": CANDIDATE_MEMORY_PREFILTER_K,
-        "dynamic_prequery_ledger": DYNAMIC_PREQUERY_LEDGER_VERSION,
-        "anchor_best_k": ANCHOR_BEST_K,
-        "anchor_worst_k": ANCHOR_WORST_K,
-        "anchor_nearby_k": ANCHOR_NEARBY_K,
-        "llm_retry_policy": LLM_RETRY_POLICY_VERSION,
-        "llm_retry_until_success": LLM_RETRY_UNTIL_SUCCESS,
-        "llm_strict_scoring": LLM_STRICT_SCORING,
-        "llm_max_concurrency": LLM_MAX_CONCURRENCY,
-        "llm_api_key_count": LLM_API_KEY_COUNT,
-        "llm_per_key_concurrency": LLM_PER_KEY_CONCURRENCY,
-        "llm_key_scheduler": LLM_KEY_SCHEDULER_VERSION,
-        "dataset_key_allocation": DATASET_KEY_ALLOCATION_VERSION,
-        "dataset_queue_order": DATASET_QUEUE_ORDER_VERSION,
-        "dataset_queue_max_workers": DATASET_QUEUE_MAX_WORKERS,
-        "llm_rate_limit_batch_size": LLM_RATE_LIMIT_BATCH_SIZE,
-        "llm_rate_limit_sleep_seconds": LLM_RATE_LIMIT_SLEEP_SECONDS,
-        "llm_retry_base_seconds": LLM_RETRY_BASE_SECONDS,
-        "llm_retry_max_seconds": LLM_RETRY_MAX_SECONDS,
-        "dynamic_rescoring_failure_policy": (
-            PRODUCTION_PROTOCOL["dynamic_rescoring_failure_policy"]
-        ),
+        "dynamic_strategy_names": list(_active_dynamic_names()),
     }
 
 
-def _controlled_knowledge_scores(
-    scores: np.ndarray,
-    *,
-    dataset_name: str,
-    run_seed: int,
-) -> tuple[np.ndarray, dict]:
-    """Return the run-specific knowledge channel and its compact audit record.
-
-    The shuffled control preserves the exact score multiset while breaking its
-    candidate assignment.  Its seed is derived from immutable protocol/run
-    identifiers, so checkpoint resume and independent reruns reproduce the
-    same permutation without storing a large index vector.
-    """
-    values = np.asarray(scores, dtype=np.float64)
-    if values.ndim != 1 or not len(values) or not np.isfinite(values).all():
-        raise ValueError("Knowledge scores must be a non-empty finite 1-D array")
-
-    source_score_digest = hashlib.sha256(values.tobytes(order="C")).hexdigest()
-    multiset_digest = hashlib.sha256(
-        np.sort(values).tobytes(order="C")
-    ).hexdigest()
-    if KNOWLEDGE_SCORE_CONTROL == "observed":
-        return values, {
-            "mode": "observed",
-            "version": KNOWLEDGE_SCORE_CONTROL_VERSION,
-            "run_seed": int(run_seed),
-            "source_score_sha256": source_score_digest,
-            "score_multiset_sha256": multiset_digest,
-            "permutation_seed": None,
-            "permutation_sha256": None,
-        }
-    if KNOWLEDGE_SCORE_CONTROL != "shuffled":
-        raise ValueError(
-            "knowledge_score_control must be 'observed' or 'shuffled', got "
-            f"{KNOWLEDGE_SCORE_CONTROL!r}"
-        )
-
-    seed_payload = (
-        f"{KNOWLEDGE_SCORE_CONTROL_VERSION}|{KNOWLEDGE_TIE_SALT}|"
-        f"{dataset_name}|{int(run_seed)}"
-    ).encode("utf-8")
-    permutation_seed = int.from_bytes(
-        hashlib.sha256(seed_payload).digest()[:4], "big", signed=False
-    )
-    permutation = np.random.RandomState(permutation_seed).permutation(len(values))
-    controlled = values[permutation]
-    if not np.array_equal(np.sort(controlled), np.sort(values)):
-        raise RuntimeError("Shuffled knowledge control changed the score multiset")
-    return controlled, {
-        "mode": "shuffled",
-        "version": KNOWLEDGE_SCORE_CONTROL_VERSION,
-        "run_seed": int(run_seed),
-        "source_score_sha256": source_score_digest,
-        "score_multiset_sha256": multiset_digest,
-        "permutation_seed": int(permutation_seed),
-        "permutation_sha256": hashlib.sha256(
-            permutation.astype(np.int64).tobytes(order="C")
-        ).hexdigest(),
-    }
 
 
-def _controlled_pool_scores(
-    scores: dict[str, np.ndarray],
-    *,
-    dataset_name: str,
-    run_seed: int,
-) -> tuple[dict[str, np.ndarray], dict]:
-    """Expose only the protocol's ``s_phys`` channel to acquisition.
-
-    Static scoring also returns raw component scores for evidence auditing.
-    Those fields are not acquisition inputs under ``s_phys_only_v1`` and must
-    not be passed directly to the one-dimensional paired-control helper.
-    """
-    if not isinstance(scores, dict) or "s_phys" not in scores:
-        raise ValueError("Static LLM scores must contain the s_phys channel")
-    controlled, audit = _controlled_knowledge_scores(
-        scores["s_phys"],
-        dataset_name=dataset_name,
-        run_seed=run_seed,
-    )
-    return {"s_phys": controlled}, audit
 
 
 def _knowledge_tie_break_ranks(
@@ -772,16 +514,13 @@ def _knowledge_tie_break_ranks(
 
 
 def _feature_fit_scope() -> str:
-    """Describe exactly which information may shape the representation."""
-    if FEATURE_REPRESENTATION == "physics_llm":
-        return "initial_labels_plus_full_pool_x"
     return "full_pool_x_only_target_independent"
 
 
 def _output_namespace() -> tuple[Path, str]:
     runtime = _runtime_protocol()
-    if runtime == PRODUCTION_PROTOCOL:
-        return OUTPUT_DIR, "production"
+    if runtime == DEFAULT_PROTOCOL:
+        return OUTPUT_DIR, "paper"
     raw = json.dumps(runtime, sort_keys=True, separators=(",", ":"))
     protocol_id = hashlib.sha1(raw.encode("utf-8")).hexdigest()[:12]
     return OUTPUT_DIR / "_custom" / protocol_id, "custom"
@@ -838,7 +577,7 @@ def _checkpoint_progress(payload: dict) -> tuple[int, int, int, int]:
     active = payload.get("in_progress") or {}
     run_idx = int(active.get("run_idx", -1))
     try:
-        strategy_idx = list(STRATEGY_NAMES).index(active.get("strategy"))
+        strategy_idx = list(payload.get("config", {}).get("strategy_names", _active_strategy_names())).index(active.get("strategy"))
     except ValueError:
         strategy_idx = -1
     try:
@@ -1270,82 +1009,14 @@ def _sha256_file(path: Path) -> dict:
 
 @lru_cache(maxsize=1)
 def _llm_runtime_fingerprint() -> dict:
-    """Fingerprint every active model/retrieval input that can change scores."""
-    base = {
+    """Bind cached scores to the service, model and active scoring code."""
+    return {
         "api_base_url": LLM_API_BASE_URL,
         "scoring_model": LLM_SCORING_MODEL,
         "temperature": LLM_SCORING_TEMPERATURE,
-        "top_k": LLM_RETRIEVAL_TOP_K,
-        "use_hyde": LLM_USE_HYDE,
-        "retrieval_mode": LLM_RETRIEVAL_MODE,
-        "retrieval_policy": LLM_RETRIEVAL_POLICY_VERSION,
-        "prompt_implementation": _sha256_file(
-            PROJECT / "common" / "llm" / "prompts.py"
-        ),
-        "retrieval_implementation": [
-            _sha256_file(PROJECT / "common" / "llm" / "reviewer.py"),
-        ],
-    }
-    if LLM_RETRIEVAL_MODE == "disabled":
-        return {
-            **base,
-            "bm25_required": False,
-            "rag_artifacts": [],
-            "index_implementation": [],
-        }
-
-    from common.llm.reviewer import (
-        RAG_MAX_PER_SOURCE,
-        RAG_SECTION_FILTER,
-        RAG_SNIPPET_MAX_CHARS,
-    )
-    from common.rag.identity import (
-        BM25_DOCUMENT_VERSION,
-        CHUNK_ID_VERSION,
-        INDEX_ID_SCHEMA_VERSION,
-    )
-    from common.rag.process_normalization import PROCESS_NORMALIZATION_VERSION
-    from common.rag.retrieve import (
-        BM25_PATH,
-        EMBED_DIM,
-        META_PATH,
-        MODEL as EMBEDDING_MODEL,
-        VEC_PATH,
-    )
-    from common.rag.tokenization import BM25_TOKENIZATION_VERSION
-
-    return {
-        **base,
-        "section_filter": list(RAG_SECTION_FILTER),
-        "snippet_max_chars": int(RAG_SNIPPET_MAX_CHARS),
-        "max_per_source": int(RAG_MAX_PER_SOURCE),
-        "bm25_weight": 0.4,
-        "bm25_tokenization": BM25_TOKENIZATION_VERSION,
-        "bm25_document": BM25_DOCUMENT_VERSION,
-        "process_normalization": PROCESS_NORMALIZATION_VERSION,
-        "chunk_id_version": CHUNK_ID_VERSION,
-        "index_id_schema_version": INDEX_ID_SCHEMA_VERSION,
-        "bm25_required": True,
-        "embedding_model": EMBEDDING_MODEL,
-        "embedding_dimensions": int(EMBED_DIM),
-        "rag_artifacts": [
-            _sha256_file(Path(VEC_PATH)),
-            _sha256_file(Path(META_PATH)),
-            _sha256_file(Path(BM25_PATH)),
-        ],
-        "retrieval_implementation": [
-            *base["retrieval_implementation"],
-            _sha256_file(PROJECT / "common" / "rag" / "retrieve.py"),
-            _sha256_file(PROJECT / "common" / "rag" / "tokenization.py"),
-            _sha256_file(
-                PROJECT / "common" / "rag" / "process_normalization.py"
-            ),
-        ],
-        "index_implementation": [
-            _sha256_file(PROJECT / "common" / "rag" / "identity.py"),
-            _sha256_file(PROJECT / "common" / "rag" / "build_index.py"),
-            _sha256_file(PROJECT / "common" / "rag" / "embed_chunks.py"),
-        ],
+        "retrieval_mode": "disabled",
+        "prompt_implementation": _sha256_file(PROJECT / "common/llm/prompts.py"),
+        "scoring_implementation": _sha256_file(PROJECT / "common/llm/reviewer.py"),
     }
 
 
@@ -1423,36 +1094,8 @@ def _static_score_vectors(
     return vectors
 
 
-def _retrieval_queries_complete(value) -> bool:
-    if not isinstance(value, dict):
-        return False
-    return all(
-        isinstance(value.get(key), str) and bool(value[key].strip())
-        for key in ("dense", "sparse")
-    )
 
 
-def _references_complete(value) -> bool:
-    if not isinstance(value, list) or not value:
-        return False
-    chunk_ids: set[str] = set()
-    for reference in value:
-        if not isinstance(reference, dict):
-            return False
-        chunk_id = str(reference.get("chunk_id", "")).strip()
-        text_sha256 = str(reference.get("text_sha256", "")).strip().lower()
-        snippet = reference.get("snippet")
-        if (
-            not chunk_id
-            or chunk_id in chunk_ids
-            or len(text_sha256) != 64
-            or any(char not in "0123456789abcdef" for char in text_sha256)
-            or not isinstance(snippet, str)
-            or not snippet.strip()
-        ):
-            return False
-        chunk_ids.add(chunk_id)
-    return True
 
 
 def _static_evidence_complete(
@@ -1511,18 +1154,11 @@ def _static_evidence_complete(
                     return False
                 if str(record.get("evidence_generation_id", "")).lower() != generation_id:
                     return False
-                if expected_retrieval_mode == "disabled":
-                    evidence_payload_ok = (
-                        record.get("retrieval_queries") == {}
-                        and record.get("references") == []
-                    )
-                else:
-                    evidence_payload_ok = (
-                        _retrieval_queries_complete(
-                            record.get("retrieval_queries")
-                        )
-                        and _references_complete(record.get("references"))
-                    )
+                evidence_payload_ok = (
+                    expected_retrieval_mode == "disabled"
+                    and record.get("retrieval_queries") == {}
+                    and record.get("references") == []
+                )
                 if (
                     _canonical_evidence_value(record.get("candidate_input"))
                     != canonical_candidates[candidate_index]
@@ -1732,9 +1368,6 @@ def precompute_llm_scores(
     reviewer = LLMReviewer(
         model=LLM_SCORING_MODEL,
         temperature=LLM_SCORING_TEMPERATURE,
-        top_k=LLM_RETRIEVAL_TOP_K,
-        use_hyde=LLM_USE_HYDE,
-        retrieval_mode=LLM_RETRIEVAL_MODE,
         material_system=material_system,
         composition_unit=composition_unit,
         element_cols=element_cols,
@@ -1846,103 +1479,34 @@ def precompute_llm_scores(
 # Single-Dataset Pipeline
 # ═══════════════════════════════════════════════════════════════════════
 
-def _reuse_compatible_llm_cache(
-    dataset_name: str,
-    destination: Path,
-    expected_metadata: dict,
-    expected_length: int,
-    expected_candidates: list[dict],
-) -> bool:
-    """Reuse exact static scores when only acquisition-side controls changed."""
-    if destination.exists():
-        return False
-    sources: list[tuple[str, Path]] = []
-    if expected_metadata.get("run_mode") == "custom":
-        sources.append(
-            (
-                f"{EXPERIMENT_VERSION}/production",
-                OUTPUT_DIR / dataset_name / "_llm_scores.json",
-            )
-        )
-    sources.extend(
-        (
-            version,
-            OUTPUT_DIR.parent / version / dataset_name / "_llm_scores.json",
-        )
-        for version in COMPATIBLE_LLM_CACHE_EXPERIMENTS
-    )
-    for source_label, source in sources:
-        source_evidence = _llm_evidence_path(source)
-        if not source.exists():
-            continue
-        try:
-            cached = json.loads(source.read_text(encoding="utf-8"))
-            migrated_metadata = dict(cached.get("_cache_metadata", {}))
-            migrated_metadata["experiment_version"] = expected_metadata["experiment_version"]
-            migrated_metadata["run_mode"] = expected_metadata["run_mode"]
-            score_vectors = _static_score_vectors(cached, expected_length)
-            if (
-                score_vectors is None
-                or migrated_metadata != expected_metadata
-                or not _static_evidence_complete(
-                    source_evidence,
-                    expected_length,
-                    expected_candidates,
-                    expected_generation_id=cached.get(
-                        "_evidence_generation_id"
-                    ),
-                    expected_scores=cached,
-                    expected_composition_unit=expected_metadata.get(
-                        "composition_unit"
-                    ),
-                    expected_objective_direction=expected_metadata.get(
-                        "objective_direction"
-                    ),
-                    expected_retrieval_mode=expected_metadata.get(
-                        "llm_retrieval_mode",
-                        "full",
-                    ),
-                )
-            ):
-                continue
-            cached["_cache_metadata"] = expected_metadata
-            destination.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(source_evidence, _llm_evidence_path(destination))
-            tmp = destination.with_suffix(".tmp")
-            tmp.write_text(json.dumps(cached, ensure_ascii=False), encoding="utf-8")
-            tmp.replace(destination)
-            print(
-                "[reuse] Migrated exact static LLM scores from "
-                f"{source_label}"
-            )
-            return True
-        except (json.JSONDecodeError, KeyError, OSError):
-            continue
-    return False
 
 
-def _reuse_compatible_feature_run(
-    dataset_name: str,
-    run_idx: int,
-    destination: Path,
-) -> bool:
-    """Copy prior initial-fit artifacts; the loader revalidates their metadata."""
-    if destination.exists():
-        return False
-    for version in COMPATIBLE_FEATURE_CACHE_EXPERIMENTS:
-        source = (
-            OUTPUT_DIR.parent / version / dataset_name
-            / "_feature_fits" / f"run_{run_idx:03d}"
-        )
-        if source.exists():
-            destination.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copytree(source, destination)
-            print(f"[reuse] Copied compatible feature fit for run {run_idx + 1} from {version}")
-            return True
-    return False
+
+
+def _static_cache_path(dataset: str, metadata: dict) -> Path:
+    """Share a task's blind knowledge baseline across paired comparisons."""
+    raw = json.dumps(metadata, sort_keys=True, separators=(",", ":"))
+    identity = hashlib.sha256(raw.encode("utf-8")).hexdigest()[:16]
+    return OUTPUT_DIR / "_static" / dataset / identity / "_llm_scores.json"
+
+
+def _static_knowledge_identity(scores: dict, cache_path: Path) -> dict:
+    cache = json.loads(cache_path.read_text(encoding="utf-8"))
+    generation = cache.get("_evidence_generation_id")
+    values = np.asarray(scores["s_phys"], dtype=np.float64)
+    if (not _valid_sha256(generation)
+            or not np.array_equal(values, np.asarray(cache.get("s_phys"), dtype=np.float64))):
+        raise RuntimeError("Static knowledge generation changed while preparing the run")
+    return {
+        "evidence_generation_id": generation,
+        "score_sha256": hashlib.sha256(values.tobytes(order="C")).hexdigest(),
+    }
 
 
 def run_dataset(config: DatasetConfig) -> None:
+    paired_run_seeds = paired_seeds(config.name, N_RUNS, seed=SEED)
+    run_sources = (PAPER_RUNS[config.name]["source_run_numbers"][:N_RUNS]
+                   if SEED is None else None)
     if not config.data_path.is_file():
         raise FileNotFoundError(
             f"Dataset {config.name} requires {config.data_path}. "
@@ -1956,10 +1520,10 @@ def run_dataset(config: DatasetConfig) -> None:
     environment_identity = environment_fingerprint()
     out_dir.mkdir(parents=True, exist_ok=True)
     reproducibility_config = {
-        "implementation_fingerprint_version": PRODUCTION_PROTOCOL[
+        "implementation_fingerprint_version": DEFAULT_PROTOCOL[
             "implementation_fingerprint_version"
         ],
-        "environment_fingerprint_version": PRODUCTION_PROTOCOL[
+        "environment_fingerprint_version": DEFAULT_PROTOCOL[
             "environment_fingerprint_version"
         ],
         "implementation_fingerprint": implementation_identity,
@@ -2134,7 +1698,7 @@ def run_dataset(config: DatasetConfig) -> None:
         "llm_retry_base_seconds": LLM_RETRY_BASE_SECONDS,
         "llm_retry_max_seconds": LLM_RETRY_MAX_SECONDS,
         "dynamic_rescoring_failure_policy": (
-            PRODUCTION_PROTOCOL["dynamic_rescoring_failure_policy"]
+            DEFAULT_PROTOCOL["dynamic_rescoring_failure_policy"]
         ),
     }
     print(
@@ -2146,12 +1710,10 @@ def run_dataset(config: DatasetConfig) -> None:
     )
 
     # ── 2) LLM review scores ──
-    llm_cache = out_dir / "_llm_scores.json"
     llm_cache_metadata = {
         "llm_scoring_prompt": LLM_SCORING_PROMPT_VERSION,
         "llm_evidence_version": LLM_EVIDENCE_VERSION,
         "experiment_version": EXPERIMENT_VERSION,
-        "run_mode": run_mode,
         "material_system": config.material_system,
         "composition_unit": config.composition_unit,
         "objective_direction": config.objective_direction,
@@ -2172,10 +1734,10 @@ def run_dataset(config: DatasetConfig) -> None:
         "llm_runtime_fingerprint": _llm_runtime_fingerprint(),
         "knowledge_tie_break": KNOWLEDGE_TIE_BREAK_VERSION,
         "knowledge_tie_salt": KNOWLEDGE_TIE_SALT,
-        **llm_reliability_config,
     }
     if unit_meta.get("applied"):
         llm_cache_metadata["composition_unit_normalization"] = unit_meta.get("cache_key")
+    llm_cache = _static_cache_path(config.name, llm_cache_metadata)
     expected_llm_candidates = _dataframe_input_records(review_df, safe_input_cols)
     knowledge_tie_break_ranks, knowledge_tie_break_audit = (
         _knowledge_tie_break_ranks(
@@ -2185,13 +1747,6 @@ def run_dataset(config: DatasetConfig) -> None:
             composition_unit=config.composition_unit,
             objective_direction=config.objective_direction,
         )
-    )
-    _reuse_compatible_llm_cache(
-        config.name,
-        llm_cache,
-        llm_cache_metadata,
-        len(review_df),
-        expected_llm_candidates,
     )
     llm_scores = precompute_llm_scores(
         df=review_df,
@@ -2209,14 +1764,16 @@ def run_dataset(config: DatasetConfig) -> None:
         key_pool=shared_key_pool,
     )
 
+    static_knowledge_identity = _static_knowledge_identity(llm_scores, llm_cache)
+
     # ── 3) Build strategies ──
     strategies = build_strategies()
     strategy_names = [s.name for s in strategies]
     if len(strategy_names) != len(set(strategy_names)):
         raise RuntimeError(f"Duplicate strategy names: {strategy_names}")
-    if tuple(strategy_names) != STRATEGY_NAMES:
+    if tuple(strategy_names) != _active_strategy_names():
         raise RuntimeError(
-            f"Strategy protocol drift: {strategy_names} != {list(STRATEGY_NAMES)}"
+            f"Strategy protocol drift: {strategy_names} != {list(_active_strategy_names())}"
         )
     print(f"[setup] {len(strategies)} strategies: {strategy_names}")
 
@@ -2226,9 +1783,6 @@ def run_dataset(config: DatasetConfig) -> None:
     reviewer_dyn = LLMReviewer(
         model=LLM_SCORING_MODEL,
         temperature=LLM_SCORING_TEMPERATURE,
-        top_k=LLM_RETRIEVAL_TOP_K,
-        use_hyde=LLM_USE_HYDE,
-        retrieval_mode=LLM_RETRIEVAL_MODE,
         material_system=config.material_system,
         composition_unit=config.composition_unit,
         element_cols=elem_cols,
@@ -2262,14 +1816,13 @@ def run_dataset(config: DatasetConfig) -> None:
             target_col=config.target_col,
             objective_direction=config.objective_direction,
             forbidden_target_cols=property_cols,
-            top_k=LLM_RETRIEVAL_TOP_K,
             anchor_best_k=ANCHOR_BEST_K,
             anchor_worst_k=ANCHOR_WORST_K,
             anchor_nearby_k=ANCHOR_NEARBY_K,
             candidate_memory_prefilter_k=CANDIDATE_MEMORY_PREFILTER_K,
             audit_path=out_dir / DYNAMIC_EVIDENCE_FILENAMES[strategy_name],
         )
-        for strategy_name in DYNAMIC_STRATEGY_NAMES
+        for strategy_name in _active_dynamic_names()
     }
     for strategy in strategies:
         if getattr(strategy, "supports_dynamic_rescoring", False):
@@ -2288,18 +1841,13 @@ def run_dataset(config: DatasetConfig) -> None:
     if RESCORING_INTERVAL > 0:
         print(
             f"[setup] Dynamic LLM rescoring enabled for "
-            f"{list(DYNAMIC_STRATEGY_NAMES)} "
+            f"{list(_active_dynamic_names())} "
             f"(interval={RESCORING_INTERVAL})"
         )
     else:
         print("[setup] Dynamic LLM rescoring is disabled")
 
     # ── 5) AL benchmark ──
-    master_rng = np.random.RandomState(SEED)
-    paired_run_seeds = [
-        int(master_rng.randint(0, 2**31 - 1)) for _ in range(N_RUNS)
-    ]
-    knowledge_score_control_audit: list[dict] = []
     checkpoint_path = out_dir / "_checkpoint.json"
     ckpt_config = {
         "experiment_version": EXPERIMENT_VERSION,
@@ -2334,6 +1882,10 @@ def run_dataset(config: DatasetConfig) -> None:
         "iteration_checkpoint": ITERATION_CHECKPOINT_VERSION,
         **reproducibility_config,
         "seed": SEED, "dataset": config.name,
+        "paired_run_seeds": paired_run_seeds,
+        "paper_run_sources": run_sources,
+        "experiment": EXPERIMENT_MODE,
+        "fixed_lambda": FIXED_LAMBDA,
         "target_col": config.target_col,
         "target_cols": property_cols,
         "model_ready_data_guard": data_guard_metadata,
@@ -2343,10 +1895,11 @@ def run_dataset(config: DatasetConfig) -> None:
         "column_roles": column_roles,
         "visible_input_columns": safe_input_cols,
         "source_order_fingerprint": llm_cache_metadata["source_order_fingerprint"],
+        "static_knowledge_identity": static_knowledge_identity,
         "ucb_alpha": UCB_ALPHA,
         "lam_llm": LAM_LLM,
         "surrogate_policy": SURROGATE_POLICY_VERSION,
-        "nn_surrogate": PRODUCTION_PROTOCOL["nn_surrogate"],
+        "nn_surrogate": DEFAULT_PROTOCOL["nn_surrogate"],
         "surrogate_sigma_calibration": SURROGATE_SIGMA_CALIBRATION,
         "ensemble_min_train_samples": ENSEMBLE_MIN_TRAIN_SAMPLES,
         "ensemble_weight_update_samples": ENSEMBLE_WEIGHT_UPDATE_SAMPLES,
@@ -2355,8 +1908,6 @@ def run_dataset(config: DatasetConfig) -> None:
         "ensemble_top_weight_strength": ENSEMBLE_TOP_WEIGHT_STRENGTH,
         "gbdt_bootstrap_models": GBDT_BOOTSTRAP_MODELS,
         "llm_score_mode": "objective_utility_static_s_phys_plus_tie_rank_v6",
-        "knowledge_score_control": KNOWLEDGE_SCORE_CONTROL,
-        "knowledge_score_control_version": KNOWLEDGE_SCORE_CONTROL_VERSION,
         "knowledge_tie_break": KNOWLEDGE_TIE_BREAK_VERSION,
         "knowledge_tie_salt": KNOWLEDGE_TIE_SALT,
         "knowledge_tie_break_audit": knowledge_tie_break_audit,
@@ -2365,12 +1916,9 @@ def run_dataset(config: DatasetConfig) -> None:
         "llm_scoring_model": LLM_SCORING_MODEL,
         "llm_api_base_url": LLM_API_BASE_URL,
         "llm_scoring_temperature": LLM_SCORING_TEMPERATURE,
-        "llm_retrieval_top_k": LLM_RETRIEVAL_TOP_K,
-        "llm_use_hyde": LLM_USE_HYDE,
         "llm_retrieval_mode": LLM_RETRIEVAL_MODE,
-        "llm_retrieval_policy": LLM_RETRIEVAL_POLICY_VERSION,
         "llm_runtime_fingerprint": llm_cache_metadata["llm_runtime_fingerprint"],
-        "lambda_mode": PRODUCTION_PROTOCOL["lambda_mode"],
+        "lambda_mode": "fixed" if FIXED_LAMBDA is not None else DEFAULT_PROTOCOL["lambda_mode"],
         "ewrc_gamma": EWRC_GAMMA,
         "composition_unit_normalization": (
             unit_meta.get("cache_key") if unit_meta.get("applied") else "disabled"
@@ -2379,7 +1927,7 @@ def run_dataset(config: DatasetConfig) -> None:
             "disabled_for_static_control"
             if RESCORING_INTERVAL == 0
             else (
-                "llmdynamic_and_hybrid_independent_per_round_shortlist_"
+                "llmdynamic_and_calm_independent_per_round_shortlist_"
                 "static_rank_slots_v3"
             )
         ),
@@ -2398,16 +1946,16 @@ def run_dataset(config: DatasetConfig) -> None:
         "dynamic_top_m_min_mult": DYNAMIC_TOP_M_MIN_MULT,
         "dynamic_top_m_cap": DYNAMIC_TOP_M_CAP,
         "dynamic_random_frac": DYNAMIC_RANDOM_FRAC,
-        "dynamic_rank_fusion": PRODUCTION_PROTOCOL["dynamic_rank_fusion"],
+        "dynamic_rank_fusion": DEFAULT_PROTOCOL["dynamic_rank_fusion"],
         "llm_dynamic_shortlist_policy": LLM_DYNAMIC_SHORTLIST_POLICY_VERSION,
-        "dynamic_strategy_names": list(DYNAMIC_STRATEGY_NAMES),
+        "dynamic_strategy_names": list(_active_dynamic_names()),
         "dynamic_evidence_files": dict(DYNAMIC_EVIDENCE_FILENAMES),
         "strategy_seed_mode": "stable_offsets_v1",
         "matched_pair_seed": [
             "Adaptive-UCB",
             "LLM-dynamic",
-            "Hybrid-static",
-            "Hybrid",
+            "CALM-static",
+            "CALM",
         ],
         **llm_reliability_config,
     }
@@ -2475,15 +2023,8 @@ def run_dataset(config: DatasetConfig) -> None:
         run_seed = paired_run_seeds[run_idx]
         rng = np.random.RandomState(run_seed)
         initial_idx = rng.choice(len(y), size=n_init, replace=False)
-        run_pool_scores, run_control_audit = _controlled_pool_scores(
-            llm_scores,
-            dataset_name=config.name,
-            run_seed=run_seed,
-        )
-        run_pool_scores["_tie_break_rank"] = knowledge_tie_break_ranks.copy()
-        knowledge_score_control_audit.append(
-            {"run_index": int(run_idx), **run_control_audit}
-        )
+        run_pool_scores = {"s_phys": np.asarray(llm_scores["s_phys"]).copy(),
+                           "_tie_break_rank": knowledge_tie_break_ranks.copy()}
 
         pending_strategies = [
             s for s in strategies
@@ -2494,7 +2035,6 @@ def run_dataset(config: DatasetConfig) -> None:
 
         y_run = y
         run_feature_dir = out_dir / "_feature_fits" / f"run_{run_idx:03d}"
-        _reuse_compatible_feature_run(config.name, run_idx, run_feature_dir)
         X_run, y_run, _ = load_external_dataset_initial_fit(
             xlsx_path=config.data_path,
             target_col=config.target_col,
@@ -2532,8 +2072,8 @@ def run_dataset(config: DatasetConfig) -> None:
 
             if sname in (
                 "LLM-dynamic",
-                "Hybrid",
-                "Hybrid-static",
+                "CALM",
+                "CALM-static",
                 "Adaptive-UCB",
                 "NN-UCB",
             ):
@@ -2556,6 +2096,8 @@ def run_dataset(config: DatasetConfig) -> None:
                 }
                 _save_checkpoint(in_progress)
 
+            if sname in dynamic_scorers:
+                dynamic_scorers[sname].set_run_context(run_idx, sname)
             records = run_single_al_loop(
                 strategy=strategy,
                 X=X_run,
@@ -2577,8 +2119,8 @@ def run_dataset(config: DatasetConfig) -> None:
 
             if sname in (
                 "LLM-dynamic",
-                "Hybrid",
-                "Hybrid-static",
+                "CALM",
+                "CALM-static",
                 "Adaptive-UCB",
                 "NN-UCB",
             ):
@@ -2625,6 +2167,10 @@ def run_dataset(config: DatasetConfig) -> None:
             "iteration_checkpoint": ITERATION_CHECKPOINT_VERSION,
             **reproducibility_config,
             "seed": SEED,
+            "paired_run_seeds": paired_run_seeds,
+            "paper_run_sources": run_sources,
+            "experiment": EXPERIMENT_MODE,
+            "fixed_lambda": FIXED_LAMBDA,
             "target_cols": property_cols,
             "model_ready_data_guard": data_guard_metadata,
             "composition_unit": config.composition_unit,
@@ -2633,10 +2179,11 @@ def run_dataset(config: DatasetConfig) -> None:
             "column_roles": column_roles,
             "visible_input_columns": safe_input_cols,
             "source_order_fingerprint": llm_cache_metadata["source_order_fingerprint"],
+            "static_knowledge_identity": static_knowledge_identity,
             "ucb_alpha": UCB_ALPHA,
             "lam_llm": LAM_LLM,
             "surrogate_policy": SURROGATE_POLICY_VERSION,
-            "nn_surrogate": PRODUCTION_PROTOCOL["nn_surrogate"],
+            "nn_surrogate": DEFAULT_PROTOCOL["nn_surrogate"],
             "surrogate_sigma_calibration": SURROGATE_SIGMA_CALIBRATION,
             "ensemble_min_train_samples": ENSEMBLE_MIN_TRAIN_SAMPLES,
             "ensemble_weight_update_samples": ENSEMBLE_WEIGHT_UPDATE_SAMPLES,
@@ -2645,9 +2192,6 @@ def run_dataset(config: DatasetConfig) -> None:
             "ensemble_top_weight_strength": ENSEMBLE_TOP_WEIGHT_STRENGTH,
             "gbdt_bootstrap_models": GBDT_BOOTSTRAP_MODELS,
             "llm_score_mode": "objective_utility_static_s_phys_plus_tie_rank_v6",
-            "knowledge_score_control": KNOWLEDGE_SCORE_CONTROL,
-            "knowledge_score_control_version": KNOWLEDGE_SCORE_CONTROL_VERSION,
-            "knowledge_score_control_audit": knowledge_score_control_audit,
             "knowledge_tie_break": KNOWLEDGE_TIE_BREAK_VERSION,
             "knowledge_tie_salt": KNOWLEDGE_TIE_SALT,
             "knowledge_tie_break_audit": knowledge_tie_break_audit,
@@ -2659,12 +2203,9 @@ def run_dataset(config: DatasetConfig) -> None:
             "llm_scoring_model": LLM_SCORING_MODEL,
             "llm_api_base_url": LLM_API_BASE_URL,
             "llm_scoring_temperature": LLM_SCORING_TEMPERATURE,
-            "llm_retrieval_top_k": LLM_RETRIEVAL_TOP_K,
-            "llm_use_hyde": LLM_USE_HYDE,
             "llm_retrieval_mode": LLM_RETRIEVAL_MODE,
-            "llm_retrieval_policy": LLM_RETRIEVAL_POLICY_VERSION,
             "llm_runtime_fingerprint": llm_cache_metadata["llm_runtime_fingerprint"],
-            "lambda_mode": PRODUCTION_PROTOCOL["lambda_mode"],
+            "lambda_mode": "fixed" if FIXED_LAMBDA is not None else DEFAULT_PROTOCOL["lambda_mode"],
             "ewrc_gamma": EWRC_GAMMA,
             "composition_unit_normalization": (
                 unit_meta.get("cache_key") if unit_meta.get("applied") else "disabled"
@@ -2673,7 +2214,7 @@ def run_dataset(config: DatasetConfig) -> None:
                 "disabled_for_static_control"
                 if RESCORING_INTERVAL == 0
                 else (
-                    "llmdynamic_and_hybrid_independent_per_round_shortlist_"
+                    "llmdynamic_and_calm_independent_per_round_shortlist_"
                     "static_rank_slots_v3"
                 )
             ),
@@ -2692,18 +2233,18 @@ def run_dataset(config: DatasetConfig) -> None:
             "dynamic_top_m_min_mult": DYNAMIC_TOP_M_MIN_MULT,
             "dynamic_top_m_cap": DYNAMIC_TOP_M_CAP,
             "dynamic_random_frac": DYNAMIC_RANDOM_FRAC,
-            "dynamic_rank_fusion": PRODUCTION_PROTOCOL["dynamic_rank_fusion"],
+            "dynamic_rank_fusion": DEFAULT_PROTOCOL["dynamic_rank_fusion"],
             "llm_dynamic_shortlist_policy": (
                 LLM_DYNAMIC_SHORTLIST_POLICY_VERSION
             ),
-            "dynamic_strategy_names": list(DYNAMIC_STRATEGY_NAMES),
+            "dynamic_strategy_names": list(_active_dynamic_names()),
             "dynamic_evidence_files": dict(DYNAMIC_EVIDENCE_FILENAMES),
             "strategy_seed_mode": "stable_offsets_v1",
             "matched_pair_seed": [
                 "Adaptive-UCB",
                 "LLM-dynamic",
-                "Hybrid-static",
-                "Hybrid",
+                "CALM-static",
+                "CALM",
             ],
             **llm_reliability_config,
             "global_max": float(global_max),
@@ -2728,10 +2269,7 @@ def run_dataset(config: DatasetConfig) -> None:
         n_init=n_init,
         total_budget=total_budget,
         objective_direction=config.objective_direction,
-        primary_strategy=PRIMARY_INFERENCE_STRATEGY,
-        primary_comparators=PRIMARY_INFERENCE_COMPARATORS,
-        primary_inference_version=PRIMARY_INFERENCE_VERSION,
-        exploratory_inference_version=EXPLORATORY_INFERENCE_VERSION,
+        reference_strategy="CALM",
     )
     stats_path = out_dir / "stats.json"
     stats_path.write_text(json.dumps(stats, ensure_ascii=False, indent=2), encoding="utf-8")
@@ -2778,115 +2316,45 @@ def run_dataset(config: DatasetConfig) -> None:
 
 def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(
-        description="CALM: calibrated knowledge-data active learning for metallic materials"
+        description="CALM: the nine-task, single-objective paper benchmark"
     )
-    p.add_argument("--dataset", type=str, default="2xxx_T6__UTS",
-                   help=f"Dataset name. Available: {list(DATASETS.keys())}")
-    p.add_argument("--n-runs", type=int, default=N_RUNS)
-    p.add_argument(
-        "--initial-fraction", type=float, default=INITIAL_LABELED_FRACTION
-    )
-    p.add_argument(
-        "--batch-fraction", type=float, default=BATCH_QUERY_FRACTION
-    )
-    p.add_argument(
-        "--total-budget-fraction",
-        type=float,
-        default=TOTAL_LABELED_BUDGET_FRACTION,
-    )
-    p.add_argument("--seed", type=int, default=SEED)
-    p.add_argument(
-        "--api-key-slot",
-        type=int,
-        choices=range(1, DATASET_QUEUE_MAX_WORKERS + 1),
-        default=1,
-        help=(
-            "One-based slot in CALM_API_KEY_1..4. "
-            "Each dataset runner uses one key."
-        ),
-    )
-    p.add_argument(
-        "--feature-representation",
-        choices=("raw", "physics", "physics_llm"),
-        default=FEATURE_REPRESENTATION,
-        help=(
-            "raw=composition+process; physics=raw plus corrected deterministic "
-            "atomic descriptors; physics_llm=physics plus optional audited "
-            "LLM algebraic candidates"
-        ),
-    )
-    p.add_argument("--rescoring-interval", type=int, default=RESCORING_INTERVAL)
-    p.add_argument(
-        "--ewrc-gamma",
-        type=float,
-        default=EWRC_GAMMA,
-        help="Extreme-rank exponent; 0 reproduces global Spearman, 2 is EWRC.",
-    )
-    p.add_argument(
-        "--knowledge-score-control",
-        choices=("observed", "shuffled"),
-        default=KNOWLEDGE_SCORE_CONTROL,
-        help=(
-            "observed=use candidate-matched LLM scores; shuffled=apply a "
-            "deterministic paired-run permutation. Shuffled requires "
-            "--rescoring-interval 0."
-        ),
-    )
+    p.add_argument("--dataset", choices=list(DATASETS), default="2xxx_T6__UTS")
+    p.add_argument("--n-runs", type=int, default=10)
+    p.add_argument("--initial-fraction", type=float, default=INITIAL_LABELED_FRACTION)
+    p.add_argument("--batch-fraction", type=float, default=BATCH_QUERY_FRACTION)
+    p.add_argument("--total-budget-fraction", type=float, default=TOTAL_LABELED_BUDGET_FRACTION)
+    p.add_argument("--seed", type=int, default=None,
+                   help="Generate new paired runs; omit to use the paper's selected run seeds.")
+    p.add_argument("--api-key-slot", type=int, choices=range(1, 5), default=1,
+                   help="One-based slot in CALM_API_KEY_1..4.")
+    p.add_argument("--experiment", choices=(
+        "benchmark", "supplementary", "full", "no-fsr", "no-ewrc",
+        "no-fsr-no-ewrc", "spearman"), default="benchmark",
+        help="Nine-strategy main comparison, ten-strategy supplement, or one paper ablation.")
     return p.parse_args()
 
 
 def main():
     global N_RUNS, INITIAL_LABELED_FRACTION, BATCH_QUERY_FRACTION
     global TOTAL_LABELED_BUDGET_FRACTION, SEED, RESCORING_INTERVAL, EWRC_GAMMA
-    global FEATURE_REPRESENTATION, KNOWLEDGE_SCORE_CONTROL, API_KEY_SLOT
-
+    global API_KEY_SLOT, EXPERIMENT_MODE, FIXED_LAMBDA
     args = parse_args()
-
-    positive_args = {"n_runs": args.n_runs}
-    invalid = {name: value for name, value in positive_args.items() if value <= 0}
-    fraction_invalid = not (
-        0.0 < args.initial_fraction < args.total_budget_fraction <= 1.0
-        and 0.0 < args.batch_fraction <= 1.0
-    )
-    ewrc_invalid = not math.isfinite(args.ewrc_gamma) or args.ewrc_gamma < 0.0
-    if (
-        invalid
-        or fraction_invalid
-        or args.rescoring_interval < 0
-        or ewrc_invalid
-        or not 1 <= args.api_key_slot <= DATASET_QUEUE_MAX_WORKERS
-    ):
-        raise ValueError(
-            "Require positive run count, non-negative rescoring interval and "
-            "EWRC gamma, a key slot in "
-            f"1..{DATASET_QUEUE_MAX_WORKERS}, and "
-            "0 < initial_fraction < total_budget_fraction <= 1 with "
-            f"0 < batch_fraction <= 1; got {vars(args)}"
-        )
-    if args.knowledge_score_control == "shuffled" and args.rescoring_interval != 0:
-        raise ValueError(
-            "The shuffled knowledge-score control must use "
-            "--rescoring-interval 0 so dynamic LLM feedback cannot restore the "
-            "candidate-score association."
-        )
+    if (args.n_runs < 1
+            or not 0 < args.initial_fraction < args.total_budget_fraction <= 1
+            or not 0 < args.batch_fraction <= 1
+            or (args.seed is not None and not 0 <= args.seed < 2**32)):
+        raise ValueError("Require positive runs, valid budget fractions and a seed in [0, 2**32).")
     N_RUNS = args.n_runs
     INITIAL_LABELED_FRACTION = args.initial_fraction
     BATCH_QUERY_FRACTION = args.batch_fraction
     TOTAL_LABELED_BUDGET_FRACTION = args.total_budget_fraction
     SEED = args.seed
-    FEATURE_REPRESENTATION = args.feature_representation
-    RESCORING_INTERVAL = args.rescoring_interval
-    EWRC_GAMMA = args.ewrc_gamma
-    KNOWLEDGE_SCORE_CONTROL = args.knowledge_score_control
-    API_KEY_SLOT = int(args.api_key_slot)
-
-    if args.dataset not in DATASETS:
-        print(f"Unknown dataset: {args.dataset}")
-        print(f"Available: {list(DATASETS.keys())}")
-        sys.exit(1)
-
-    config = DATASETS[args.dataset]
-    run_dataset(config)
+    API_KEY_SLOT = args.api_key_slot
+    EXPERIMENT_MODE = args.experiment
+    RESCORING_INTERVAL = 0 if args.experiment in {"no-fsr", "no-fsr-no-ewrc"} else 1
+    EWRC_GAMMA = 0.0 if args.experiment == "spearman" else 2.0
+    FIXED_LAMBDA = 0.3 if args.experiment in {"no-ewrc", "no-fsr-no-ewrc"} else None
+    run_dataset(DATASETS[args.dataset])
 
 
 if __name__ == "__main__":

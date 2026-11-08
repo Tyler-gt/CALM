@@ -1,21 +1,13 @@
-"""Leakage-audited data and feature representations for CALM.
+"""Leakage-audited raw inputs for CALM.
 
-The experiment exposes three explicit representations:
-
-* ``raw``: reported composition plus deterministically encoded process inputs;
-* ``physics``: ``raw`` plus atom-correct Magpie, configurational entropy, and
-  radius-mismatch descriptors;
-* ``physics_llm``: ``physics`` plus validated algebraic candidates proposed by
-  the optional feature-construction skill.
-
-The publication default is ``raw`` so acquisition-policy comparisons share
-one deterministic, target-independent representation. Pool covariates may be
-used for constant/redundancy screening; unqueried response values may not.
+Reported compositions, numeric process conditions, deterministic categorical
+encodings and missing-value masks form a shared target-independent feature
+space. Only observed pool covariates enter constant/redundancy screening;
+measured targets and auxiliary properties are excluded from model inputs.
 """
 
 from __future__ import annotations
 
-import ast
 import hashlib
 import json
 import sys
@@ -29,9 +21,6 @@ sys.path.insert(0, str(PROJECT))
 from common.llm.config import get_api_base_url, get_llm_model, validate_api_base_url
 
 COMPOSITION_UNIT_NORMALIZATION_VERSION = "fraction_to_percent_v2"
-ATOMIC_DESCRIPTOR_COMPOSITION_VERSION = (
-    "explicit_basis_reported_components_missing_masks_v2"
-)
 COMPLETE_COMPOSITION_POLICY = "complete_composition_required_v1"
 REPORTED_COMPOSITION_POLICY = (
     "preserve_unknown_reported_components_with_missing_indicators_v1"
@@ -42,69 +31,17 @@ COMPOSITION_MISSING_POLICIES = frozenset(
 MODEL_READY_DATA_GUARD_VERSION = (
     "manifest_hash_roles_candidate_keys_unit_missing_closure_v3"
 )
-FEATURE_REPRESENTATION_VERSION = "raw_physics_physics_llm_v1"
-FEATURE_REPRESENTATIONS = frozenset({"raw", "physics", "physics_llm"})
+FEATURE_REPRESENTATION_VERSION = "raw_inputs_only_v1"
+FEATURE_REPRESENTATIONS = frozenset({"raw"})
 COLUMN_ROLE_SCHEMA_VERSION = "all_property_targets_v2"
 COLUMN_ROLE_PROMPT_VERSION = "four_roles_all_properties_hidden_v2"
-LLM_FEATURE_LEAKAGE_GUARD_VERSION = "forbid_all_property_columns_v2"
-LLM_FEATURE_MATERIAL_PROFILE_VERSION = (
-    "registered_material_unit_source_missing_null_contract_v4"
-)
 PROCESS_FEATURE_ENCODING_VERSION = (
     "numeric_missing_masks_plus_deterministic_onehot_missing_category_v2"
 )
 RAW_INPUT_FORCE_KEEP_VERSION = "elements_missing_masks_plus_encoded_process_v2"
 INITIAL_FEATURE_FIT_VERSION = (
-    "initial_labels_visible_pool_x_unsupervised_atomic_representation_v12"
+    "raw_pool_x_unsupervised_representation_v1"
 )
-
-
-def _llm_feature_cache_name(
-    unit_normalized: bool,
-    composition_unit: str = "wt.%",
-) -> str:
-    """Return a short, policy-keyed filename safe under Windows MAX_PATH."""
-    if composition_unit not in {"wt.%", "at.%"}:
-        raise ValueError(
-            "composition_unit must be exactly 'wt.%' or 'at.%', got "
-            f"{composition_unit!r}"
-        )
-    policy = {
-        "leakage_guard": LLM_FEATURE_LEAKAGE_GUARD_VERSION,
-        "material_profile": LLM_FEATURE_MATERIAL_PROFILE_VERSION,
-        "composition_units": (
-            COMPOSITION_UNIT_NORMALIZATION_VERSION
-            if unit_normalized
-            else "not_normalized"
-        ),
-        "composition_basis": composition_unit,
-    }
-    raw = json.dumps(policy, sort_keys=True, separators=(",", ":"))
-    policy_id = hashlib.sha1(raw.encode("utf-8")).hexdigest()[:12]
-    return f"_llmf_{policy_id}.pkl"
-
-
-def _formula_uses_any_column(formula: str, columns: list[str] | set[str]) -> bool:
-    """Return True when a formula references any response/property column."""
-    forbidden = {str(c).casefold() for c in columns}
-    try:
-        tree = ast.parse(str(formula).strip(), mode="eval")
-    except SyntaxError:
-        # Formula validation elsewhere rejects invalid expressions.  Treat an
-        # unparsable cached formula conservatively when a forbidden name occurs.
-        text = str(formula)
-        return any(col in text.casefold() for col in forbidden)
-    tokens = {
-        str(node.id).casefold()
-        for node in ast.walk(tree)
-        if isinstance(node, ast.Name)
-    }
-    tokens.update(
-        str(node.value).casefold()
-        for node in ast.walk(tree)
-        if isinstance(node, ast.Constant) and isinstance(node.value, str)
-    )
-    return bool(tokens & forbidden)
 
 
 def assert_no_target_leakage(
@@ -802,7 +739,7 @@ def normalize_mixed_composition_units(
     return out, meta
 
 
-# ── 通用特征构建 (base + Magpie) ──
+# Raw input encoding
 
 
 def _encode_process_features(
@@ -843,7 +780,7 @@ def _force_keep_input_feature_columns(
     element_cols: list[str] | None,
     process_cols: list[str] | None,
 ) -> list[str]:
-    """Return raw model inputs that must survive supervised feature selection.
+    """Return raw input anchors protected from correlation-based removal.
 
     Elements keep their original composition columns. Numeric process columns
     keep their original names, while categorical process columns keep every
@@ -864,134 +801,22 @@ def _force_keep_input_feature_columns(
     ]
 
 
-def _build_atomic_compositions(
-    comp_df: pd.DataFrame,
-    element_cols: list[str],
-    composition_unit: str,
-    *,
-    allow_missing: bool = False,
-) -> pd.Series:
-    """Build normalized atomic compositions for atom-based descriptors.
-
-    Raw composition columns are never overwritten.  For ``wt.%`` inputs, each
-    positive mass amount is divided by the element's atomic mass before
-    normalization.  ``at.%`` inputs are normalized directly, so both 0--1 and
-    0--100 atomic scales are accepted.
-
-    Missing composition cells fail closed by default.  For an explicitly
-    registered source-missingness policy, ``allow_missing=True`` computes
-    descriptors from reported components only; the caller must also expose
-    per-element source-missing indicators.  Missing values are never converted
-    to zero or filled to a balance composition.
-    """
-    if composition_unit not in {"wt.%", "at.%"}:
-        raise ValueError(
-            "composition_unit must be exactly 'wt.%' or 'at.%', got "
-            f"{composition_unit!r}"
-        )
-
-    from pymatgen.core.composition import Composition
-    from pymatgen.core.periodic_table import Element
-
-    elem_cols = [c for c in element_cols if c in comp_df.columns]
-    if not elem_cols:
-        raise ValueError("No element columns are available for composition conversion")
-
-    atomic_masses: dict[str, float] = {}
-    if composition_unit == "wt.%":
-        for element in elem_cols:
-            try:
-                mass = float(Element(element).atomic_mass)
-            except Exception as exc:
-                raise ValueError(
-                    f"Invalid element column {element!r} for atomic-mass conversion"
-                ) from exc
-            if not np.isfinite(mass) or mass <= 0.0:
-                raise ValueError(
-                    f"Invalid atomic mass for element column {element!r}: {mass}"
-                )
-            atomic_masses[element] = mass
-
-    def _row_to_atomic_composition(row: pd.Series) -> Composition:
-        atomic_amounts: dict[str, float] = {}
-        for element in elem_cols:
-            raw_value = row[element]
-            if pd.isna(raw_value):
-                if allow_missing:
-                    continue
-                raise ValueError(
-                    f"Missing composition value at row {row.name!r}, "
-                    f"element {element!r}"
-                )
-            try:
-                value = float(raw_value)
-            except (TypeError, ValueError) as exc:
-                raise ValueError(
-                    f"Non-numeric composition value at row {row.name!r}, "
-                    f"element {element!r}: {raw_value!r}"
-                ) from exc
-            if not np.isfinite(value):
-                raise ValueError(
-                    f"Non-finite composition value at row {row.name!r}, "
-                    f"element {element!r}: {raw_value!r}"
-                )
-            if value < 0.0:
-                raise ValueError(
-                    f"Negative composition value at row {row.name!r}, "
-                    f"element {element!r}: {value}"
-                )
-            if value == 0.0:
-                continue
-            atomic_amounts[element] = (
-                value / atomic_masses[element]
-                if composition_unit == "wt.%"
-                else value
-            )
-
-        total = float(sum(atomic_amounts.values()))
-        if not np.isfinite(total) or total <= 0.0:
-            raise ValueError(
-                f"Zero total composition at row {row.name!r}; "
-                "cannot compute atom-based descriptors"
-            )
-        return Composition(atomic_amounts).fractional_composition
-
-    return comp_df[elem_cols].apply(_row_to_atomic_composition, axis=1)
-
-
 def build_generic_features(
     comp_df: pd.DataFrame,
     df: pd.DataFrame,
     element_cols: list[str],
     process_cols: list[str] | None = None,
     composition_unit: str = "wt.%",
-    include_atomic_descriptors: bool = True,
     composition_missing_policy: str = COMPLETE_COMPOSITION_POLICY,
 ) -> pd.DataFrame:
-    """构建 base + Magpie 特征。不经过 SimpleAlloyFeatureConstructor,
-       因此从源头就不产生任何手工特征 (ratio/PSI/RII 等).
+    """Encode reported composition and process inputs without derived features.
 
-    跨体系通用: 接受元素列和工艺列作为参数, Magpie 自动适配任意元素。
-
-    Parameters
-    ----------
-    comp_df : 含有元素列的 DataFrame
-    df : 原始 DataFrame (用于提取工艺列)
-    element_cols : 元素列名列表
-    process_cols : 工艺列名列表 (可选)
-
-    Returns
-    -------
-    pd.DataFrame: base 元素列 + 工艺列 + Magpie + comp_entropy + radius_mismatch.
-    Raw element columns remain on ``composition_unit``; atom-based descriptors
-    always use normalized atomic fractions. Set
-    ``include_atomic_descriptors=False`` for the raw representation, which
-    returns only composition columns plus encoded process inputs.
+    Composition values retain the explicitly registered unit. Missing reported
+    compositions retain an indicator before median imputation. Process columns
+    use numeric values plus missing masks, or deterministic one-hot categories.
     """
-    if process_cols is None:
-        process_cols = []
-    if not isinstance(include_atomic_descriptors, (bool, np.bool_)):
-        raise TypeError("include_atomic_descriptors must be a boolean")
+    if composition_unit not in {"wt.%", "at.%"}:
+        raise ValueError("composition_unit must be exactly 'wt.%' or 'at.%'")
     if composition_missing_policy not in COMPOSITION_MISSING_POLICIES:
         raise ValueError(
             "composition_missing_policy must be one of "
@@ -1000,128 +825,31 @@ def build_generic_features(
     allow_missing_composition = (
         composition_missing_policy == REPORTED_COMPOSITION_POLICY
     )
-
     feats = pd.DataFrame(index=comp_df.index)
-
-    # 1) base 元素列
     elem_cols = [c for c in element_cols if c in comp_df.columns]
     if not elem_cols:
         raise ValueError(
-            "No element composition columns are available for generic feature "
+            "No element composition columns are available for raw feature "
             "construction. Check the dataset .columns.json role cache."
         )
-    for c in elem_cols:
-        feats[c] = pd.to_numeric(comp_df[c], errors="coerce")
+    for col in elem_cols:
+        feats[col] = pd.to_numeric(comp_df[col], errors="coerce")
         if allow_missing_composition:
-            feats[f"{c}__source_missing"] = feats[c].isna().astype(np.float64)
+            feats[f"{col}__source_missing"] = feats[col].isna().astype(np.float64)
 
-    # 2) 工艺列: numeric passthrough + deterministic one-hot categoricals
     process_features = _encode_process_features(df, process_cols)
     feats = pd.concat([feats, process_features], axis=1)
-
-    if not include_atomic_descriptors:
-        numeric_cols = feats.select_dtypes(include=[np.number]).columns
-        all_missing_numeric = [col for col in numeric_cols if feats[col].isna().all()]
-        if all_missing_numeric:
-            feats = feats.drop(columns=all_missing_numeric)
-            numeric_cols = feats.select_dtypes(include=[np.number]).columns
-        feats[numeric_cols] = feats[numeric_cols].fillna(
-            feats[numeric_cols].median()
-        )
-        print(
-            f"[data] Built {len(feats.columns)} features: "
-            f"base({len(elem_cols)}) + "
-            f"process({len(process_features.columns)}) + "
-            "atomic_descriptors(disabled)"
-        )
-        return feats
-
-    from matminer.featurizers.composition import ElementProperty
-    from matminer.utils.data import MagpieData
-    from pymatgen.core.periodic_table import Element
-
-    # 3) Magpie 特征.  Pymatgen ``Composition`` amounts are atomic, so wt.%
-    # must be converted through atomic masses before any atom-based descriptor.
-    compositions = _build_atomic_compositions(
-        comp_df,
-        elem_cols,
-        composition_unit,
-        allow_missing=allow_missing_composition,
-    )
-    ep = ElementProperty.from_preset(preset_name="magpie")
-    # Matminer otherwise inherits a machine-dependent process count.  A fixed
-    # single worker avoids Windows spawn recursion and keeps feature generation
-    # deterministic across formal runs.
-    ep.set_n_jobs(1)
-    magpie_df = ep.featurize_dataframe(
-        pd.DataFrame({"composition": compositions}),
-        "composition", ignore_errors=True, pbar=False,
-    )
-    if "composition" in magpie_df.columns:
-        magpie_df = magpie_df.drop(columns=["composition"])
-    magpie_df.index = comp_df.index
-    feats = pd.concat([feats, magpie_df], axis=1)
-
-    # 4) 混合熵
-    def _entropy(comp) -> float:
-        vals = np.array(list(comp.get_el_amt_dict().values()), dtype=float)
-        if vals.size == 0 or vals.sum() <= 0:
-            return np.nan
-        frac = vals / vals.sum()
-        frac = frac[frac > 0]
-        return float(-np.sum(frac * np.log(frac)))
-
-    feats["comp_entropy"] = compositions.apply(_entropy)
-
-    # 5) 原子半径失配
-    md = MagpieData(impute_nan=True)
-
-    def _radius_mismatch(comp) -> float:
-        d = comp.get_el_amt_dict()
-        if not d:
-            return np.nan
-        total = sum(d.values())
-        radii, fracs = [], []
-        for ele, amt in d.items():
-            try:
-                r = md.get_elemental_property(Element(ele), "AtomicRadius")
-            except Exception:
-                r = None
-            if r is not None and np.isfinite(float(r)):
-                radii.append(float(r))
-                fracs.append(float(amt) / total)
-        if not radii:
-            return np.nan
-        fracs = np.asarray(fracs, dtype=float)
-        frac_total = float(fracs.sum())
-        if not np.isfinite(frac_total) or frac_total <= 0.0:
-            return np.nan
-        fracs = fracs / frac_total
-        r_mean = float(np.dot(fracs, radii))
-        if abs(r_mean) < 1e-12:
-            return np.nan
-        return float(np.sqrt(np.dot(fracs, [(1.0 - r / r_mean) ** 2 for r in radii])))
-
-    feats["radius_mismatch"] = compositions.apply(_radius_mismatch)
-
-    # 6) 缺失值填充
     numeric_cols = feats.select_dtypes(include=[np.number]).columns
     all_missing_numeric = [col for col in numeric_cols if feats[col].isna().all()]
     if all_missing_numeric:
         feats = feats.drop(columns=all_missing_numeric)
         numeric_cols = feats.select_dtypes(include=[np.number]).columns
     feats[numeric_cols] = feats[numeric_cols].fillna(feats[numeric_cols].median())
-
-    n_magpie = sum(1 for c in feats.columns if c.startswith("MagpieData "))
-    descriptor_basis = (
-        "wt.%->atomic_fraction"
-        if composition_unit == "wt.%"
-        else "at.%->atomic_fraction"
+    print(
+        f"[data] Built {len(feats.columns)} raw features: "
+        f"composition({len(elem_cols)}) + process({len(process_features.columns)}) "
+        "with source-missing masks"
     )
-    print(f"[data] Built {len(feats.columns)} features: "
-          f"base({len(elem_cols)}) + process({len(process_features.columns)}) + "
-          f"Magpie({n_magpie}) + entropy + mismatch "
-          f"[atomic_basis={descriptor_basis}]")
     return feats
 
 
@@ -1334,372 +1062,7 @@ def _llm_detect_column_roles(
     return roles
 
 
-def _filter_leaky_llm_features(
-    llm_features: pd.DataFrame,
-    cached: dict,
-    *,
-    target_col: str,
-    forbidden_target_cols: list[str],
-) -> tuple[pd.DataFrame, list[str]]:
-    """Remove cached LLM features whose formula uses any measured response."""
-    meta_target = cached.get("metadata", {}).get("per_target", {}).get(target_col, {})
-    selected_formula_names = set(meta_target.get("selected_cols", []))
-    formula_by_name = {
-        item.get("name"): item.get("formula", "")
-        for item in meta_target.get("all_formulas", [])
-        if item.get("name")
-    }
-    leaky_names = {
-        name
-        for name in selected_formula_names
-        if name not in formula_by_name
-        or _formula_uses_any_column(
-            formula_by_name[name], set(forbidden_target_cols)
-        )
-    }
-    # Metadata is the dependency proof. A feature without a matching selected
-    # formula is rejected rather than treated as safe.
-    leaky_names.update(
-        str(col)
-        for col in llm_features.columns
-        if str(col).startswith("LLM_") and str(col) not in selected_formula_names
-    )
-    leaky_names.discard(None)
-    # Also reject direct response columns even if cache metadata is incomplete.
-    leaky_names.update(c for c in forbidden_target_cols if c in llm_features.columns)
-    dropped = sorted(str(c) for c in leaky_names if c in llm_features.columns)
-    return llm_features.drop(columns=dropped, errors="ignore"), dropped
-
-
-def _validated_llm_feature_frame(
-    cached: dict,
-    *,
-    target_col: str,
-    forbidden_target_cols: list[str],
-    expected_index: pd.Index,
-) -> tuple[pd.DataFrame, list[str]]:
-    """Return one structurally aligned, finite, leakage-filtered LLM table.
-
-    The feature designer validates scientific cache identity.  This second
-    boundary validates the cached payload itself so that a truncated,
-    reordered, duplicated, or non-numeric table cannot be silently aligned to
-    the wrong candidates by ``concat``.
-    """
-    if not isinstance(cached, dict):
-        raise ValueError("LLM feature result must be a dictionary")
-    feature_tables = cached.get("llm_features")
-    if not isinstance(feature_tables, dict):
-        raise ValueError("LLM feature result lacks a per-target feature mapping")
-
-    llm_features = feature_tables.get(target_col)
-    if llm_features is None:
-        return pd.DataFrame(index=expected_index.copy()), []
-    if not isinstance(llm_features, pd.DataFrame):
-        raise ValueError(
-            f"LLM features for {target_col!r} must be a pandas DataFrame"
-        )
-    if len(llm_features) != len(expected_index):
-        raise ValueError(
-            f"LLM feature row-count mismatch for {target_col!r}: "
-            f"cache={len(llm_features)}, expected={len(expected_index)}"
-        )
-    if not llm_features.index.equals(expected_index):
-        raise ValueError(
-            f"LLM feature index mismatch for {target_col!r}; cached rows are "
-            "not aligned with the current candidate order"
-        )
-    if llm_features.columns.duplicated().any():
-        duplicates = sorted(
-            set(str(c) for c in llm_features.columns[llm_features.columns.duplicated()])
-        )
-        raise ValueError(
-            f"Duplicate LLM feature columns for {target_col!r}: {duplicates}"
-        )
-
-    llm_features, dropped = _filter_leaky_llm_features(
-        llm_features,
-        cached,
-        target_col=target_col,
-        forbidden_target_cols=forbidden_target_cols,
-    )
-    if llm_features.empty:
-        return llm_features.copy(), dropped
-
-    numeric = llm_features.apply(pd.to_numeric, errors="coerce")
-    if not np.isfinite(numeric.to_numpy(dtype=np.float64)).all():
-        raise ValueError(
-            f"LLM features for {target_col!r} contain non-numeric or non-finite "
-            "values; formula-specific imputation is prohibited"
-        )
-    return numeric, dropped
-
-
-def _build_initial_design_frame(
-    df: pd.DataFrame,
-    designer_cols: list[str],
-    target_col: str,
-    initial_idx: np.ndarray,
-) -> pd.DataFrame:
-    """Expose full-pool inputs but labels only for the initial AL membership."""
-    design = df.loc[:, designer_cols].copy()
-    labeled = np.zeros(len(design), dtype=bool)
-    labeled[np.asarray(initial_idx, dtype=int)] = True
-    design.loc[~labeled, target_col] = np.nan
-    return design
-
-
 # ── 通用数据集加载 ──────────────────────────────────────────────────
-
-def load_external_dataset(
-    xlsx_path: str | Path,
-    target_col: str,
-    element_cols: list[str] | None = None,
-    process_cols: list[str] | None = None,
-    target_cols: list[str] | None = None,
-    output_dir: str | Path | None = None,
-    force_rerun_selection: bool = False,
-    normalize_mixed_units: bool = False,
-    material_system: str | None = None,
-    composition_unit: str = "wt.%",
-    composition_missing_policy: str = COMPLETE_COMPOSITION_POLICY,
-) -> tuple[pd.DataFrame, np.ndarray, pd.DataFrame]:
-    """加载合金数据集, 构建完整特征矩阵 (Magpie + LLM + 筛选).
-
-    适用于任意合金体系 (Al/Cu/Mg/Ti/Steel), 元素列和工艺列自动检测。
-
-    Parameters
-    ----------
-    xlsx_path : 数据文件路径
-    target_col : 目标列名
-    element_cols : 元素成分列名 (None=自动检测)
-    process_cols : 工艺参数列名 (None=自动检测)
-    output_dir : 缓存输出目录 (LLM 特征 / 特征筛选 / 全矩阵)
-    force_rerun_selection : 强制重新筛选
-
-    Returns
-    -------
-    X : 选定特征矩阵
-    y : 目标值 (float32)
-    comp_df : 元素成分 + 目标列
-    """
-    from common.feature_engineer.feature_select import (
-        FEATURE_SELECTION_POLICY_VERSION,
-        select_features,
-    )
-
-    df = read_dataset_table(xlsx_path)
-    print(f"[data] Loaded {len(df)} samples from {Path(xlsx_path).name}")
-
-    # 自动检测列 (LLM 语义分类, 带缓存)
-    if element_cols is None or process_cols is None or target_cols is None:
-        roles = _llm_detect_column_roles(
-            df,
-            target_col,
-            xlsx_path=xlsx_path,
-            known_target_cols=target_cols,
-        )
-        if element_cols is None:
-            element_cols = roles["element_cols"]
-        if process_cols is None:
-            process_cols = roles["process_cols"]
-        if target_cols is None:
-            target_cols = roles["target_cols"]
-
-    element_cols, process_cols, target_cols = _safe_input_roles(
-        element_cols=element_cols,
-        process_cols=process_cols,
-        target_cols=target_cols,
-        current_target=target_col,
-    )
-
-    df, unit_meta = normalize_mixed_composition_units(
-        df,
-        element_cols,
-        enabled=normalize_mixed_units,
-        label=Path(xlsx_path).name,
-    )
-
-    y = pd.to_numeric(df[target_col], errors="coerce").to_numpy(dtype=np.float32)
-    valid = np.isfinite(y)
-    if not valid.all():
-        df = df.loc[valid].reset_index(drop=True)
-        y = y[valid]
-
-    # 成分
-    elem_available = [c for c in element_cols if c in df.columns]
-    comp_df = df[elem_available].copy()
-    comp_df[target_col] = y
-
-    # 特征构建: Magpie
-    feats = build_generic_features(
-        comp_df[elem_available],
-        df,
-        elem_available,
-        process_cols or [],
-        composition_unit=composition_unit,
-        composition_missing_policy=composition_missing_policy,
-    )
-    force_keep_input_cols = _force_keep_input_feature_columns(
-        df,
-        feats,
-        elem_available,
-        process_cols,
-    )
-    assert_no_target_leakage(
-        force_keep_input_cols,
-        target_cols,
-        context=f"{Path(xlsx_path).name} force-kept raw inputs",
-    )
-
-    # LLM 特征设计 (跨体系, 带缓存)
-    if output_dir is not None:
-        output_dir = Path(output_dir)
-        output_dir.mkdir(parents=True, exist_ok=True)
-        llm_cache_name = _llm_feature_cache_name(
-            bool(unit_meta.get("applied")),
-            composition_unit,
-        )
-        llm_cache = output_dir / llm_cache_name
-
-        print(
-            f"[data] Designing or identity-validating LLM features for "
-            f"{Path(xlsx_path).name}..."
-        )
-        import asyncio
-        from common.feature_engineer.llm_feature_designer import LLMFeatureDesigner
-
-        designer = LLMFeatureDesigner(
-            temperature=0.0,
-        )
-        designer_cols = [
-            c for c in [*elem_available, *process_cols, target_col]
-            if c in df.columns
-        ]
-        # This legacy entry point has no AL initial-set membership.  Keep the
-        # target name for task semantics, but never expose any target values.
-        df_design = df.loc[:, designer_cols].copy()
-        df_design.loc[:, target_col] = np.nan
-        cached = asyncio.run(designer.design_features(
-            df=df_design,
-            target_cols=[target_col],
-            element_cols=elem_available,
-            process_cols=process_cols,
-            n_rounds=2,
-            max_features_per_round=8,
-            use_rag=False,
-            cache_path=str(llm_cache),
-            material_system=material_system,
-            composition_unit=composition_unit,
-        ))
-        llm_features, dropped = _validated_llm_feature_frame(
-            cached,
-            target_col=target_col,
-            forbidden_target_cols=target_cols,
-            expected_index=df.index,
-        )
-        if llm_features is not None and not llm_features.empty:
-            if dropped:
-                print(
-                    f"[data] Dropped {len(dropped)} LLM features that referenced "
-                    f"response/property columns: {dropped}"
-                )
-            llm_new = llm_features[[c for c in llm_features.columns if c not in feats.columns]]
-            if not llm_new.empty:
-                feats = pd.concat([feats.reset_index(drop=True), llm_new.reset_index(drop=True)], axis=1)
-            n_llm = len(llm_new.columns)
-            print(f"[data] Added {n_llm} LLM-designed features")
-        else:
-            print("[data] No LLM features found in cache")
-
-    # 全矩阵 + 特征筛选
-    feats = feats.copy()
-    feats[target_col] = y
-
-    if output_dir is not None:
-        full_path = output_dir / "features_full.csv"
-        feats.to_csv(full_path, index=False)
-
-        sel_csv = output_dir / f"features_selected_{target_col.lower()}.csv"
-        selection_report = output_dir / "feature_selection_report.json"
-        unit_sidecar = output_dir / f"{sel_csv.stem}.unit_meta.json"
-        expected_unit_metadata = {
-            "composition_unit_normalization": (
-                unit_meta.get("cache_key")
-                if unit_meta.get("applied")
-                else "disabled"
-            ),
-            "composition_unit": composition_unit,
-            "atomic_descriptor_composition": (
-                ATOMIC_DESCRIPTOR_COMPOSITION_VERSION
-            ),
-        }
-        selection_unit_ok = False
-        if unit_sidecar.exists():
-            try:
-                cached_unit = json.loads(unit_sidecar.read_text(encoding="utf-8"))
-                selection_unit_ok = cached_unit == expected_unit_metadata
-            except json.JSONDecodeError:
-                selection_unit_ok = False
-
-        selection_policy_ok = False
-        if selection_report.exists():
-            try:
-                cached_selection = json.loads(
-                    selection_report.read_text(encoding="utf-8")
-                )
-                selection_policy_ok = (
-                    cached_selection.get("feature_selection_policy_version")
-                    == FEATURE_SELECTION_POLICY_VERSION
-                    and cached_selection.get("force_keep_raw_columns")
-                    == force_keep_input_cols
-                )
-            except json.JSONDecodeError:
-                selection_policy_ok = False
-
-        if (
-            not sel_csv.exists()
-            or force_rerun_selection
-            or not selection_unit_ok
-            or not selection_policy_ok
-        ):
-            select_features(
-                data_path=full_path,
-                targets=[target_col],
-                force_keep_cols=force_keep_input_cols,
-                output_dir=output_dir,
-            )
-            unit_sidecar.write_text(
-                json.dumps(
-                    expected_unit_metadata,
-                    ensure_ascii=False,
-                    indent=2,
-                ),
-                encoding="utf-8",
-            )
-
-        sel_df = pd.read_csv(sel_csv, nrows=1)
-        selected_cols = [c for c in sel_df.columns if c != target_col]
-        print(f"[data] Feature selection: {len(selected_cols)} features cached")
-    else:
-        selected_cols = [c for c in feats.columns if c != target_col]
-
-    # 对齐
-    available = [c for c in selected_cols if c in feats.columns]
-    assert_no_target_leakage(
-        available,
-        target_cols,
-        context=f"{Path(xlsx_path).name} selected features",
-    )
-    X = feats[available].copy()
-    for col in available:
-        X[col] = pd.to_numeric(X[col], errors="coerce")
-
-    n_llm = sum(1 for c in available if c.startswith("LLM_"))
-    n_magpie = sum(1 for c in available if c.startswith("MagpieData "))
-    n_base = len(available) - n_llm - n_magpie
-    print(f"[data] Feature matrix: {X.shape[1]} selected cols x {X.shape[0]} rows "
-          f"(base:{n_base} Magpie:{n_magpie} LLM:{n_llm})")
-    return X, y, comp_df
 
 
 def load_external_dataset_initial_fit(
@@ -1717,15 +1080,11 @@ def load_external_dataset_initial_fit(
     composition_missing_policy: str = COMPLETE_COMPOSITION_POLICY,
     feature_representation: str = "raw",
 ) -> tuple[pd.DataFrame, np.ndarray, pd.DataFrame]:
-    """Load a dataset while fitting LLM feature design and selection on AL initial rows only.
+    """Load raw inputs and screen full-pool covariates without target values.
 
-    The returned X still covers every target-valid row, but any target-supervised step sees
-    labels only from ``initial_idx``. This is the AL-safe path for CALM benchmarks.
-
-    ``feature_representation`` controls the ablation boundary: ``raw`` keeps
-    composition plus encoded process inputs, ``physics`` adds atom-correct
-    Magpie/entropy/radius descriptors, and ``physics_llm`` additionally invokes
-    the initial-label-only LLM feature designer.
+    The returned X covers every target-valid candidate. Initial indices identify
+    the run and the labelled rows in audit exports; they do not select features.
+    Only the ``raw`` representation is supported.
     """
     from common.feature_engineer.feature_select import (
         FEATURE_SELECTION_POLICY_VERSION,
@@ -1800,7 +1159,6 @@ def load_external_dataset_initial_fit(
         elem_available,
         process_cols or [],
         composition_unit=composition_unit,
-        include_atomic_descriptors=feature_representation != "raw",
         composition_missing_policy=composition_missing_policy,
     )
     force_keep_input_cols = _force_keep_input_feature_columns(
@@ -1818,35 +1176,13 @@ def load_external_dataset_initial_fit(
     initial_fingerprint = hashlib.sha1(
         np.asarray(fit_initial_idx, dtype=np.int64).tobytes()
     ).hexdigest()[:12]
-    designer_cols = [
-        c for c in [*elem_available, *process_cols, target_col]
-        if c in df.columns
-    ]
     input_fingerprint_cols = [
         c for c in [*elem_available, *process_cols]
         if c in df.columns
     ]
     pool_x_fingerprint = dataframe_fingerprint(df, input_fingerprint_cols)
-    df_design = _build_initial_design_frame(
-        df,
-        designer_cols,
-        target_col,
-        fit_initial_idx,
-    )
-    if feature_representation == "physics_llm":
-        visible_initial_label_fingerprint = dataframe_fingerprint(
-            df_design.iloc[fit_initial_idx],
-            [target_col],
-        )
-        source_fingerprint_scope = "full_pool_x_plus_initial_labels_only"
-        source_fingerprint_payload = {
-            "pool_x": pool_x_fingerprint,
-            "visible_initial_labels": visible_initial_label_fingerprint,
-        }
-    else:
-        visible_initial_label_fingerprint = "not_used"
-        source_fingerprint_scope = "full_pool_x_only_target_independent"
-        source_fingerprint_payload = {"pool_x": pool_x_fingerprint}
+    source_fingerprint_scope = "full_pool_x_only_target_independent"
+    source_fingerprint_payload = {"pool_x": pool_x_fingerprint}
     source_fingerprint = hashlib.sha256(
         json.dumps(
             source_fingerprint_payload,
@@ -1858,18 +1194,11 @@ def load_external_dataset_initial_fit(
         "feature_fit_version": INITIAL_FEATURE_FIT_VERSION,
         "feature_representation_version": FEATURE_REPRESENTATION_VERSION,
         "feature_representation": feature_representation,
-        "atomic_descriptor_composition": (
-            ATOMIC_DESCRIPTOR_COMPOSITION_VERSION
-            if feature_representation != "raw"
-            else "disabled"
-        ),
         "feature_selection_policy_version": FEATURE_SELECTION_POLICY_VERSION,
         "raw_input_force_keep_version": RAW_INPUT_FORCE_KEEP_VERSION,
         "force_keep_input_cols": force_keep_input_cols,
         "process_feature_encoding": PROCESS_FEATURE_ENCODING_VERSION,
         "column_role_schema_version": COLUMN_ROLE_SCHEMA_VERSION,
-        "llm_feature_leakage_guard_version": LLM_FEATURE_LEAKAGE_GUARD_VERSION,
-        "llm_feature_material_profile_version": LLM_FEATURE_MATERIAL_PROFILE_VERSION,
         "material_system": str(material_system or "").strip(),
         "composition_unit": composition_unit,
         "composition_missing_policy": composition_missing_policy,
@@ -1877,7 +1206,6 @@ def load_external_dataset_initial_fit(
         "source_fingerprint": source_fingerprint,
         "source_fingerprint_scope": source_fingerprint_scope,
         "pool_x_fingerprint": pool_x_fingerprint,
-        "visible_initial_label_fingerprint": visible_initial_label_fingerprint,
         "target_col": target_col,
         "target_cols": target_cols,
         "element_cols": elem_available,
@@ -1892,64 +1220,9 @@ def load_external_dataset_initial_fit(
     fit_signature_id = hashlib.sha1(signature_raw.encode("utf-8")).hexdigest()[:12]
     fit_dir = Path(output_dir) if output_dir is not None else None
     if fit_dir is not None:
-        # Keep both 12-hex audit identities, but use compact labels.  The v26
-        # output root is long enough that the former
-        # ``initial_<id>_fit_<id>`` spelling pushed some Windows artifacts
-        # beyond the traditional MAX_PATH limit (for example, the
-        # FeCoNi__Coercivity selected-feature CSV reached 262 characters).
+        # Compact audit identifiers keep nested output paths safe on Windows.
         fit_dir = fit_dir / f"i{initial_fingerprint}_f{fit_signature_id}"
         fit_dir.mkdir(parents=True, exist_ok=True)
-
-    if feature_representation == "physics_llm":
-        llm_cache = None
-        if fit_dir is not None:
-            llm_cache_name = _llm_feature_cache_name(
-                bool(unit_meta.get("applied")),
-                composition_unit,
-            )
-            llm_cache = fit_dir / llm_cache_name
-        print(
-            f"[data] Designing or identity-validating initial-fit LLM features "
-            f"({len(initial_idx)}/{len(df)} labels visible)..."
-        )
-        import asyncio
-        from common.feature_engineer.llm_feature_designer import LLMFeatureDesigner
-
-        designer = LLMFeatureDesigner(
-            temperature=0.0,
-        )
-        cached = asyncio.run(designer.design_features(
-            df=df_design,
-            target_cols=[target_col],
-            element_cols=elem_available,
-            process_cols=process_cols,
-            n_rounds=2,
-            max_features_per_round=8,
-            use_rag=False,
-            cache_path=str(llm_cache) if llm_cache is not None else None,
-            material_system=material_system,
-            composition_unit=composition_unit,
-        ))
-
-        llm_features, dropped = _validated_llm_feature_frame(
-            cached,
-            target_col=target_col,
-            forbidden_target_cols=target_cols,
-            expected_index=df.index,
-        )
-        if llm_features is not None and not llm_features.empty:
-            if dropped:
-                print(
-                    f"[data] Dropped {len(dropped)} LLM features that referenced "
-                    f"response/property columns: {dropped}"
-                )
-
-            llm_new = llm_features[[c for c in llm_features.columns if c not in feats.columns]]
-            if not llm_new.empty:
-                feats = pd.concat([feats.reset_index(drop=True), llm_new.reset_index(drop=True)], axis=1)
-            print(f"[data] Added {len(llm_new.columns)} initial-fit LLM-designed features")
-        else:
-            print("[data] No LLM features found in initial-fit cache")
 
     feats = feats.copy()
     feats[target_col] = y
@@ -2000,8 +1273,8 @@ def load_external_dataset_initial_fit(
         sel_df = pd.read_csv(sel_csv, nrows=1)
         selected_cols = [c for c in sel_df.columns if c != target_col]
         print(
-            f"[data] Initial-fit feature selection: {len(selected_cols)} features cached "
-            f"from {len(initial_idx)} labeled rows"
+            f"[data] Pool-X feature selection: {len(selected_cols)} features cached "
+            f"for {len(df)} candidates"
         )
     else:
         selected_cols = [c for c in feats.columns if c != target_col]
@@ -2016,9 +1289,7 @@ def load_external_dataset_initial_fit(
     for col in available:
         X[col] = pd.to_numeric(X[col], errors="coerce")
 
-    n_llm = sum(1 for c in available if c.startswith("LLM_"))
-    n_magpie = sum(1 for c in available if c.startswith("MagpieData "))
-    n_base = len(available) - n_llm - n_magpie
-    print(f"[data] Feature matrix: {X.shape[1]} selected cols x {X.shape[0]} rows "
-          f"(base:{n_base} Magpie:{n_magpie} LLM:{n_llm})")
+    print(
+        f"[data] Raw feature matrix: {X.shape[1]} selected cols x {X.shape[0]} rows"
+    )
     return X, y, comp_df

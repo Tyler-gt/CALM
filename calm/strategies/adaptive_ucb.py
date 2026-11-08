@@ -1,16 +1,16 @@
-"""Adaptive-UCB: Hybrid's exact soft-ensemble surrogate path without LLM.
+"""Adaptive-UCB: CALM's exact soft-ensemble surrogate path without LLM.
 
-This is the matched data-only ablation for Hybrid.  It intentionally inherits
-``fit`` and all ensemble weighting/prediction code from ``HybridAcquisition``;
+This is the matched data-only ablation for CALM.  It intentionally inherits
+``fit`` and all ensemble weighting/prediction code from ``CALMAcquisition``;
 only the knowledge-score input is removed during acquisition.
 """
 
 from __future__ import annotations
 
-from .hybrid import HybridAcquisition
+from .calm import CALMAcquisition
 
 
-class AdaptiveUCB(HybridAcquisition):
+class AdaptiveUCB(CALMAcquisition):
     """Soft GBDT/RFR/GPR/NN Ensemble-UCB with no LLM or dynamic rescoring."""
 
     name = "Adaptive-UCB"
