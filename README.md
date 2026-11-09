@@ -145,7 +145,7 @@ The eight bundled CSVs support all nine tasks in the manuscript.
 
 See [DATA_SOURCES.md](DATA_SOURCES.md) for sources, composition units and preparation. Unknown inputs remain missing, and all target/auxiliary-property columns are excluded from model and LLM inputs. Al UTS and EL share one table.
 
-For another dataset, register a `DatasetConfig` in [`calm/runner.py`](calm/runner.py) and use an explicit `--seed` for new runs. Supply a deduplicated CSV and matching column/deduplication records with recalculated hashes and row counts; see the [Al CSV](dabase/curated/al_alloys.csv), [column definitions](dabase/curated/al_alloys.columns.json) and [deduplication record](dabase/curated/al_alloys.dedup.json). Set the target, direction, composition unit and auxiliary-property exclusions explicitly; use `REPORTED_COMPOSITION_POLICY` when composition fields are unreported.
+For another dataset, register a `DatasetConfig` in [`calm/runner.py`](calm/runner.py) with `data_path` pointing to a prepared CSV, and use an explicit `--seed` for new runs. Supply a deduplicated CSV in its documented composition unit and matching column/deduplication records with recalculated hashes and row counts; see the [Al CSV](dabase/curated/al_alloys.csv), [column definitions](dabase/curated/al_alloys.columns.json) and [deduplication record](dabase/curated/al_alloys.dedup.json). Set the target, direction, composition unit and auxiliary-property exclusions explicitly; use `REPORTED_COMPOSITION_POLICY` when composition fields are unreported.
 
 Missing or inconsistent column records stop the run before API calls; they are never regenerated during a benchmark. Direct users of `LLMReviewer` must also supply `element_cols` and `process_cols` explicitly; `process_cols=[]` is valid.
 

@@ -82,11 +82,3 @@ def is_global_optimum(
         else float(global_min)
     )
     return bool(np.isclose(float(value), optimum, rtol=1e-9, atol=1e-6))
-
-
-def best_curve_is_monotonic(values, direction: str, atol: float = 1e-10) -> bool:
-    """Check best-so-far monotonicity on the raw target scale."""
-    delta = np.diff(np.asarray(values, dtype=np.float64))
-    if validate_objective_direction(direction) == "maximize":
-        return bool(np.all(delta >= -float(atol)))
-    return bool(np.all(delta <= float(atol)))

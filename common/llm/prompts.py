@@ -8,6 +8,14 @@ from __future__ import annotations
 
 import pandas as pd
 
+NO_RETRIEVAL_PROMPT_PLACEHOLDER = (
+    "[NO-RETRIEVAL CONTROL] Literature retrieval is disabled for this run. "
+    "No paper snippets or source-derived target values were supplied. "
+    "Use only the dataset profile, candidate inputs, measured active-learning "
+    "feedback, and general prior knowledge; do not imply that a paper was "
+    "retrieved or cited."
+)
+
 SYSTEM_PROMPT = """\
 You are a senior physical metallurgist. Your task is to score the objective
 utility of the target column only for a candidate alloy composition using the
@@ -87,7 +95,7 @@ Return strict JSON only, with no markdown:
  "reason": "Concise English reason, <=150 words, explaining why the candidate can or cannot achieve strong objective performance under the registered direction."}}
 """
 
-def _fmt_range(series: "pd.Series") -> str:  # type: ignore[name-defined]  # noqa: F821
+def _fmt_range(series: pd.Series) -> str:
     """Format summary statistics for one input column."""
     v = series.dropna()
     if len(v) == 0:
@@ -101,10 +109,9 @@ def _fmt_range(series: "pd.Series") -> str:  # type: ignore[name-defined]  # noq
 
 
 def build_dataset_profile(
-    df: "pd.DataFrame",  # type: ignore[name-defined]  # noqa: F821
+    df: pd.DataFrame,
     element_cols: list[str],
     process_cols: list[str],
-    target_col: str,
     composition_unit: str = "wt.%",
 ) -> str:
     """Build a dataset profile from a DataFrame."""
@@ -143,9 +150,8 @@ def build_dataset_profile(
 
 
 def build_history_stats(
-    df: "pd.DataFrame",  # type: ignore[name-defined]  # noqa: F821
+    df: pd.DataFrame,
     element_cols: list[str],
-    target_col: str,
 ) -> str:
     """Build historical input distribution text for the LLM."""
     lines = []
@@ -159,11 +165,9 @@ def build_user_message(
     *,
     material_system: str,
     element_profile: str,
-    process_profile: str = "",
     target_info: str = "",
     history_stats: str = "",
     candidate_json: str,
-    reference_snippets: str = "",
     progress_report: str = "",
 ) -> str:
     """Build the user message sent to the LLM reviewer."""
@@ -171,8 +175,6 @@ def build_user_message(
     if material_system:
         parts.append(f"- Material-system label: {material_system}")
     parts.append(element_profile)
-    if process_profile:
-        parts.append(process_profile)
     if target_info:
         parts.append(target_info)
     parts.append(
@@ -189,11 +191,11 @@ def build_user_message(
     if progress_report:
         parts.append(f"\n## Experimental Progress (measured AL feedback)\n{progress_report}")
 
-    if reference_snippets:
-        parts.append(
-            "\n## Retrieved Literature Snippets "
-            f"(for s_phys evidence; ranked by relevance)\n{reference_snippets}"
-        )
+    # Preserve the exact notice used by the paper's no-retrieval prompt.
+    parts.append(
+        "\n## Retrieved Literature Snippets "
+        f"(for s_phys evidence; ranked by relevance)\n{NO_RETRIEVAL_PROMPT_PLACEHOLDER}"
+    )
 
     parts.append(f"\n## Candidate Alloy Inputs\n{candidate_json}")
     parts.append(
@@ -210,22 +212,18 @@ def get_messages(
     *,
     material_system: str = "",
     element_profile: str = "",
-    process_profile: str = "",
     target_info: str = "",
     history_stats: str = "",
     candidate_json: str = "",
-    reference_snippets: str = "",
     progress_report: str = "",
 ) -> list[dict[str, str]]:
     """Build the full chat messages sent to the LLM."""
     user_msg = build_user_message(
         material_system=material_system,
         element_profile=element_profile,
-        process_profile=process_profile,
         target_info=target_info,
         history_stats=history_stats,
         candidate_json=candidate_json,
-        reference_snippets=reference_snippets,
         progress_report=progress_report,
     )
 

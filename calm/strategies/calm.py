@@ -94,7 +94,7 @@ class CALMAcquisition(AcquisitionStrategy):
         )
         self.gbdt_bootstrap_models = max(2, int(gbdt_bootstrap_models))
 
-        # Fixed-surrogate compatibility state used only by NN-UCB.
+        # Fixed-surrogate state used by NN-UCB.
         self._best_surrogate: str | None = None
         self._cv_scores: dict[str, float] = {}
         self._oof_weighted_mae: dict[str, float] = {}
@@ -387,14 +387,14 @@ class CALMAcquisition(AcquisitionStrategy):
         from common.nn_ensemble.model import TrainConfig
 
         return TrainConfig(
-            target="Strength", epochs=100, lr=3e-3, weight_decay=1e-3,
-            mlp_hidden_dims=(64, 32, 16), dropout=0.20, input_noise=0.0,
-            seed=42, early_stop_patience=20, warmup_epochs=5,
+            epochs=100, lr=3e-3, weight_decay=1e-3,
+            mlp_hidden_dims=(64, 32, 16), dropout=0.20,
+            early_stop_patience=20, warmup_epochs=5,
         )
 
     @staticmethod
     def _enable_mc_dropout(model: nn.Module) -> None:
-        """Enable dropout sampling without re-enabling training-only input noise."""
+        """Enable dropout sampling while keeping other layers in evaluation mode."""
         model.eval()
         for module in model.modules():
             if isinstance(module, nn.Dropout):
@@ -1134,14 +1134,6 @@ class CALMAcquisition(AcquisitionStrategy):
         self._last_lambda_eff = float(lambda_eff)
         return float(lambda_eff)
 
-    @staticmethod
-    def _normalize_score(values: np.ndarray) -> np.ndarray:
-        v = np.asarray(values, dtype=np.float64)
-        v_min, v_max = float(np.nanmin(v)), float(np.nanmax(v))
-        if v_max > v_min:
-            return (v - v_min) / (v_max - v_min)
-        return np.zeros_like(v)
-
     def _maybe_dynamic_rescore(
         self,
         pool_scores: dict[str, np.ndarray] | None,
@@ -1190,8 +1182,6 @@ class CALMAcquisition(AcquisitionStrategy):
             progress_report, feedback_fingerprint = self._dynamic_scorer.build_feedback(
                 self._train_idx,
                 self._y_all,
-                current_scores=self._all_scores,
-                score_overrides=self._score_overrides,
                 query_indices=subset_global,
             )
 
@@ -1259,10 +1249,6 @@ class CALMAcquisition(AcquisitionStrategy):
         # checkpoint. Never silently substitute the static score here.
         rescored = self._dynamic_scorer.rescore(
             pool_indices=missing_global,
-            train_idx=self._train_idx,
-            y_train=self._y_all,
-            current_scores=self._all_scores,
-            score_overrides=self._score_overrides,
             progress_report=progress_report,
             feedback_fingerprint=feedback_fingerprint,
             iteration=self._al_iteration,

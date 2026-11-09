@@ -14,13 +14,8 @@ from typing import Iterable
 import numpy as np
 import pandas as pd
 
-# Deterministic, target-independent screening policy
-DEFAULT_DROP_COLS = ["Alloy"]
-# Feature removal must be dataset-specific and explicitly requested by callers.
-# In particular, Al is a meaningful alloying element outside Al-base datasets
-# and must not be silently removed by a shared feature-selection utility.
+# Deterministic, target-independent screening policy.
 FEATURE_SELECTION_POLICY_VERSION = "deterministic_unsupervised_pool_redundancy_v3"
-DEFAULT_FORCE_DROP_COLS: list[str] = []
 
 CORR_THRESHOLD = 0.95
 
@@ -36,13 +31,10 @@ MEDIUM_SAMPLE_CORR_THRESHOLD = 0.98
 
 # ── Internal helpers ──────────────────────────────────────────────────
 
-def _prepare_xy(df: pd.DataFrame, targets: Iterable[str],
-                drop_cols: Iterable[str], force_drop_cols: Iterable[str]):
+def _prepare_xy(df: pd.DataFrame, targets: Iterable[str]):
     targets = list(targets)
-    drop_cols = list(drop_cols)
-    force_drop_cols = list(force_drop_cols)
     feature_cols = [c for c in df.columns
-                    if c not in set(targets + drop_cols + force_drop_cols)]
+                    if c not in set(targets)]
     x = df[feature_cols].apply(pd.to_numeric, errors="coerce")
     y = df[targets].apply(pd.to_numeric, errors="coerce")
     valid_mask = y.notna().all(axis=1)
@@ -302,8 +294,6 @@ def select_features(
     targets: list[str],
     *,
     force_keep_cols: list[str] | None = None,
-    force_drop_cols: list[str] | None = None,
-    extra_drop_cols: list[str] | None = None,
     output_dir: str | Path | None = None,
     report_name: str | None = None,
 ) -> dict:
@@ -314,8 +304,6 @@ def select_features(
     data_path: Path to the feature CSV containing encoded raw inputs.
     targets: Target column names, e.g. ``["Strength"]`` or ``["Strength", "TC"]``.
     force_keep_cols: Raw-input anchor columns. Retain initial-set constants; drop full-pool constants.
-    force_drop_cols: Columns to drop unconditionally.
-    extra_drop_cols: Additional columns to drop (merged with force_drop_cols).
     output_dir: If provided, write per-target selected-feature CSVs and a JSON report here.
     report_name: JSON report filename (without a path); defaults to ``feature_selection_report.json``.
 
@@ -328,13 +316,9 @@ def select_features(
 
     if force_keep_cols is None:
         force_keep_cols = []
-    if force_drop_cols is None:
-        force_drop_cols = list(DEFAULT_FORCE_DROP_COLS)
-    if extra_drop_cols:
-        force_drop_cols = list(force_drop_cols) + list(extra_drop_cols)
 
     df = pd.read_csv(data_path)
-    x, y = _prepare_xy(df, targets, DEFAULT_DROP_COLS, force_drop_cols)
+    x, y = _prepare_xy(df, targets)
 
     force_keep_existing = [c for c in force_keep_cols if c in x.columns]
     x_screen, screening_audit = _load_unsupervised_screening_matrix(
@@ -352,7 +336,7 @@ def select_features(
         for c in force_keep_existing
         if c in constant_audit["all_missing_dropped"]
     ]
-    force_keep_recovered_after_variance = [
+    force_keep_initial_constants = [
         c
         for c in force_keep_existing
         if c in constant_audit[
@@ -421,7 +405,6 @@ def select_features(
             "n_columns": int(df.shape[1]),
         },
         "x_before_filter": int(x.shape[1]),
-        "x_after_variance_filter": int(x_var.shape[1]),
         "x_after_constant_filter": int(x_var.shape[1]),
         "x_after_corr_filter": int(x_corr.shape[1]),
         "selection_method": UNSUPERVISED_SELECTION_METHOD,
@@ -439,11 +422,10 @@ def select_features(
         "corr_threshold": corr_threshold,
         "corr_min_pairwise_observations": corr_min_observations,
         "target_columns": targets,
-        "force_drop_columns": force_drop_cols,
         "force_keep_raw_columns": force_keep_existing,
         "force_keep_all_nan_dropped": force_keep_all_nan,
-        "force_keep_recovered_after_variance": (
-            force_keep_recovered_after_variance
+        "force_keep_initial_constants": (
+            force_keep_initial_constants
         ),
         "force_keep_raw_columns_after_corr": force_keep_in_corr,
         "dropped_by_correlation": dropped_by_corr,

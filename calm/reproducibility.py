@@ -19,7 +19,7 @@ _SOURCE_PATTERNS = (
     "common/nn_ensemble/*.py",
 )
 _REQUIRED_FILES = (
-    "run.py", "requirements.txt", "calm/runner.py", "calm/data.py",
+    "run.py", "requirements.txt", "requirements-figures.txt", "calm/runner.py", "calm/data.py",
     "calm/experiment.py", "calm/objective.py", "calm/dynamic_scorer.py",
     "calm/metrics.py", "calm/plot.py", "calm/reproducibility.py",
     "common/llm/reviewer.py", "common/llm/key_pool.py",
@@ -27,7 +27,7 @@ _REQUIRED_FILES = (
 )
 _PACKAGES = (
     "numpy", "pandas", "scipy", "scikit-learn", "lightgbm", "torch",
-    "matplotlib", "openpyxl", "openai", "python-dotenv", "joblib",
+    "matplotlib", "openai", "python-dotenv", "joblib",
 )
 
 

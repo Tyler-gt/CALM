@@ -2,16 +2,7 @@
 
 from __future__ import annotations
 
-import argparse
-import json
-import sys
-from pathlib import Path
-
 import numpy as np
-
-PROJECT = Path(__file__).resolve().parent.parent
-if str(PROJECT) not in sys.path:
-    sys.path.insert(0, str(PROJECT))
 
 from calm.objective import objective_regret, validate_objective_direction
 
@@ -172,67 +163,3 @@ def compute_stats(
         "paired_comparisons": comparisons,
         "statistics": "descriptive paired differences; sample standard deviation",
     }
-
-
-def compute_stats_from_convergence(convergence: dict) -> dict:
-    """Recompute the manuscript's descriptive metrics from saved trajectories."""
-    config = convergence["config"]
-    records = convergence["strategies"]
-    first = next(iter(records.values()))[0][0]
-    best_keys = [key for key in first if str(key).startswith("best_")]
-    if len(best_keys) != 1:
-        raise ValueError(f"Expected one best_* record field, got {best_keys}")
-    return compute_stats(
-        records, float(config["global_max"]), target_label=best_keys[0],
-        global_min=float(config["global_min"]), n_samples=int(config["n_samples"]),
-        n_init=int(config["n_init"]), total_budget=int(config["total_budget"]),
-        objective_direction=str(config["objective_direction"]),
-        reference_strategy="CALM" if "CALM" in records else None,
-    )
-
-
-def recompute_stats_file(
-    convergence_path: str | Path,
-    output_path: str | Path | None = None,
-) -> Path:
-    """Atomically rewrite stats.json from an existing convergence.json."""
-    convergence_path = Path(convergence_path)
-    convergence = json.loads(convergence_path.read_text(encoding="utf-8"))
-    stats = compute_stats_from_convergence(convergence)
-    destination = (
-        Path(output_path)
-        if output_path is not None
-        else convergence_path.with_name("stats.json")
-    )
-    destination.parent.mkdir(parents=True, exist_ok=True)
-    temporary = destination.with_suffix(f"{destination.suffix}.tmp")
-    temporary.write_text(
-        json.dumps(stats, ensure_ascii=False, indent=2),
-        encoding="utf-8",
-    )
-    temporary.replace(destination)
-    return destination
-
-
-def _parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(
-        description="Recompute CALM stats from completed convergence files"
-    )
-    parser.add_argument(
-        "convergence",
-        nargs="+",
-        type=Path,
-        help="One or more completed convergence.json files",
-    )
-    return parser.parse_args()
-
-
-def _main() -> None:
-    args = _parse_args()
-    for convergence_path in args.convergence:
-        destination = recompute_stats_file(convergence_path)
-        print(f"[stats] {convergence_path} -> {destination}")
-
-
-if __name__ == "__main__":
-    _main()

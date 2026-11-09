@@ -74,8 +74,6 @@ LLM_KEY_SCHEDULER_VERSION = "single_assigned_key_local_cooldown_v2"
 DATASET_KEY_ALLOCATION_VERSION = (
     "one_dataset_one_explicit_key_slot_release_on_process_exit_v1"
 )
-DATASET_QUEUE_ORDER_VERSION = "candidate_count_ascending_v1"
-DATASET_QUEUE_MAX_WORKERS = 4
 RESOURCE_ALLOCATION_POLICY_VERSION = (
     "pool100_init10ceil_batch2halfup_total40ceil_finalclip_v1"
 )
@@ -250,8 +248,6 @@ DEFAULT_PROTOCOL = {
     "llm_per_key_concurrency": 10,
     "llm_key_scheduler": LLM_KEY_SCHEDULER_VERSION,
     "dataset_key_allocation": DATASET_KEY_ALLOCATION_VERSION,
-    "dataset_queue_order": DATASET_QUEUE_ORDER_VERSION,
-    "dataset_queue_max_workers": DATASET_QUEUE_MAX_WORKERS,
     "llm_rate_limit_batch_size": 10,
     "llm_rate_limit_sleep_seconds": 10.0,
     "llm_retry_base_seconds": 1.0,

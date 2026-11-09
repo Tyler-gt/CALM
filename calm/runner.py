@@ -28,11 +28,10 @@ from calm.data import (
     INITIAL_FEATURE_FIT_VERSION,
     PROCESS_FEATURE_ENCODING_VERSION,
     REPORTED_COMPOSITION_POLICY,
-    _llm_detect_column_roles,
+    load_column_roles,
     assert_no_target_leakage,
     dataframe_fingerprint,
     load_external_dataset_initial_fit,
-    normalize_mixed_composition_units,
     read_dataset_table,
     validate_model_ready_dataset,
 )
@@ -48,8 +47,6 @@ from calm.experiment import (
     DYNAMIC_RESCORING_CACHE_VERSION,
     DYNAMIC_STRATEGY_NAMES,
     DATASET_KEY_ALLOCATION_VERSION,
-    DATASET_QUEUE_MAX_WORKERS,
-    DATASET_QUEUE_ORDER_VERSION,
     EXPERIMENT_VERSION,
     ITERATION_CHECKPOINT_VERSION,
     KNOWLEDGE_TIE_BREAK_VERSION,
@@ -71,7 +68,6 @@ from calm.experiment import (
     STRATEGY_SET_VERSION,
     STOPPING_POLICY_VERSION,
     SURROGATE_POLICY_VERSION,
-    SURROGATE_SIGMA_CALIBRATION_VERSION,
     resolve_resource_allocation,
 )
 from calm.benchmark import PAPER_RUNS, paired_seeds
@@ -139,8 +135,6 @@ DYNAMIC_TOP_M_FRAC = float(DEFAULT_PROTOCOL["dynamic_top_m_frac"])
 DYNAMIC_TOP_M_MIN_MULT = int(DEFAULT_PROTOCOL["dynamic_top_m_min_mult"])
 DYNAMIC_TOP_M_CAP = int(DEFAULT_PROTOCOL["dynamic_top_m_cap"])
 DYNAMIC_RANDOM_FRAC = float(DEFAULT_PROTOCOL["dynamic_random_frac"])
-LLM_RETRY_UNTIL_SUCCESS = bool(DEFAULT_PROTOCOL["llm_retry_until_success"])
-LLM_STRICT_SCORING = bool(DEFAULT_PROTOCOL["llm_strict_scoring"])
 LLM_MAX_CONCURRENCY = int(DEFAULT_PROTOCOL["llm_max_concurrency"])
 LLM_API_KEY_COUNT = int(DEFAULT_PROTOCOL["llm_api_key_count"])
 LLM_PER_KEY_CONCURRENCY = int(DEFAULT_PROTOCOL["llm_per_key_concurrency"])
@@ -175,8 +169,7 @@ STRATEGY_SEED_OFFSETS = {
 class DatasetConfig:
     """Dataset specification with element and process roles from audited sidecars."""
     name: str
-    # Legacy public field name retained for compatibility; CSV is also valid.
-    xlsx_path: Path
+    data_path: Path
     target_col: str
     composition_unit: str
     objective_direction: str
@@ -184,12 +177,10 @@ class DatasetConfig:
     material_system: str = ""          # Optional material-domain context for the LLM
     target_label: str = ""             # Optional plot y-axis label; defaults to target_col
     target_unit: str = "Value"         # Optional unit for plots
-    normalize_mixed_units: bool = False
     composition_missing_policy: str = COMPLETE_COMPOSITION_POLICY
     # Measured auxiliary properties that must never be model/LLM inputs.
     additional_property_cols: tuple[str, ...] = ()
     expected_target_valid_rows: int | None = None
-    require_dedup_manifest: bool = True
 
     def __post_init__(self) -> None:
         self.objective_direction = validate_objective_direction(
@@ -209,30 +200,18 @@ class DatasetConfig:
                 f"{self.composition_missing_policy!r}"
             )
 
-    @property
-    def data_path(self) -> Path:
-        """Format-neutral alias used by the current loader."""
-        return self.xlsx_path
-
-
 def _detect_columns(
     df: pd.DataFrame,
     target_col: str,
     data_path: Path,
     known_target_cols: list[str],
-    *,
-    api_key: str | None = None,
 ) -> dict[str, list[str]]:
-    """Detect four column roles with all known properties forced as targets."""
-    return _llm_detect_column_roles(
+    """Read audited column roles and exclude all registered properties."""
+    return load_column_roles(
         df,
         target_col,
-        xlsx_path=data_path,
+        data_path=data_path,
         known_target_cols=known_target_cols,
-        api_key=api_key,
-        model=LLM_SCORING_MODEL,
-        base_url=LLM_API_BASE_URL,
-        allow_inference=False,
     )
 
 
@@ -256,7 +235,7 @@ MPEA_PROPERTIES = (
 DATASETS: dict[str, DatasetConfig] = {
     'Cu_alloys__EC': DatasetConfig(
         name="Cu_alloys__EC",
-        xlsx_path=CURATED / "Cu_alloys__EC.csv",
+        data_path=CURATED / "Cu_alloys__EC.csv",
         target_col="Electrical_conductivity_pctIACS",
         composition_unit="wt.%",
         objective_direction="maximize",
@@ -266,7 +245,7 @@ DATASETS: dict[str, DatasetConfig] = {
     ),
     'HEA_Invar__TEC': DatasetConfig(
         name="HEA_Invar__TEC",
-        xlsx_path=EXTERNAL / "HEA_Invar__TEC.csv",
+        data_path=EXTERNAL / "HEA_Invar__TEC.csv",
         target_col="TEC_1e-6_K-1",
         composition_unit="at.%",
         objective_direction="minimize",
@@ -281,7 +260,7 @@ DATASETS: dict[str, DatasetConfig] = {
     ),
     'MPEA__UTS': DatasetConfig(
         name="MPEA__UTS",
-        xlsx_path=EXTERNAL / "MPEA__Mechanical.csv",
+        data_path=EXTERNAL / "MPEA__Mechanical.csv",
         target_col="UTS_MPa",
         composition_unit="at.%",
         objective_direction="maximize",
@@ -292,7 +271,7 @@ DATASETS: dict[str, DatasetConfig] = {
     ),
     'mg_alloy__UTS': DatasetConfig(
         name="mg_alloy__UTS",
-        xlsx_path=CURATED / "mg_alloy__UTS.csv",
+        data_path=CURATED / "mg_alloy__UTS.csv",
         target_col="UTS_MPa",
         composition_unit="wt.%",
         objective_direction="maximize",
@@ -302,7 +281,7 @@ DATASETS: dict[str, DatasetConfig] = {
     ),
     'Ti_alloy__YS': DatasetConfig(
         name="Ti_alloy__YS",
-        xlsx_path=CURATED / "Ti_alloy__YS.csv",
+        data_path=CURATED / "Ti_alloy__YS.csv",
         target_col="YS_MPa",
         composition_unit="at.%",
         objective_direction="maximize",
@@ -313,7 +292,7 @@ DATASETS: dict[str, DatasetConfig] = {
     ),
     'Ti_alloy__UTS': DatasetConfig(
         name="Ti_alloy__UTS",
-        xlsx_path=CURATED / "Ti_alloy__UTS.csv",
+        data_path=CURATED / "Ti_alloy__UTS.csv",
         target_col="UTS_MPa",
         composition_unit="at.%",
         objective_direction="maximize",
@@ -324,7 +303,7 @@ DATASETS: dict[str, DatasetConfig] = {
     ),
     'mg_alloy__YS': DatasetConfig(
         name="mg_alloy__YS",
-        xlsx_path=CURATED / "mg_alloy__YS.csv",
+        data_path=CURATED / "mg_alloy__YS.csv",
         target_col="YS_MPa",
         composition_unit="wt.%",
         objective_direction="maximize",
@@ -334,7 +313,7 @@ DATASETS: dict[str, DatasetConfig] = {
     ),
     '2xxx_T6__EL': DatasetConfig(
         name="2xxx_T6__EL",
-        xlsx_path=CURATED / "al_alloys.csv",
+        data_path=CURATED / "al_alloys.csv",
         target_col="EL",
         composition_unit="wt.%",
         objective_direction="maximize",
@@ -344,7 +323,7 @@ DATASETS: dict[str, DatasetConfig] = {
     ),
     '2xxx_T6__UTS': DatasetConfig(
         name="2xxx_T6__UTS",
-        xlsx_path=CURATED / "al_alloys.csv",
+        data_path=CURATED / "al_alloys.csv",
         target_col="UTS",
         composition_unit="wt.%",
         objective_direction="maximize",
@@ -1502,10 +1481,8 @@ def _precompute_llm_scores_locked(
         max_concurrency=LLM_MAX_CONCURRENCY,
         rate_limit_batch_size=LLM_RATE_LIMIT_BATCH_SIZE,
         rate_limit_sleep_seconds=LLM_RATE_LIMIT_SLEEP_SECONDS,
-        retry_until_success=LLM_RETRY_UNTIL_SUCCESS,
         retry_base_seconds=LLM_RETRY_BASE_SECONDS,
         retry_max_seconds=LLM_RETRY_MAX_SECONDS,
-        strict_scoring=LLM_STRICT_SCORING,
         min_api_keys=LLM_API_KEY_COUNT,
         per_key_concurrency=LLM_PER_KEY_CONCURRENCY,
         key_pool=key_pool,
@@ -1706,8 +1683,6 @@ def _run_dataset_locked(config: DatasetConfig) -> None:
         expected_target_n=config.expected_target_valid_rows,
         expected_composition_unit=config.composition_unit,
         expected_composition_missing_policy=config.composition_missing_policy,
-        require_dedup_manifest=config.require_dedup_manifest,
-        require_roles_sidecar=True,
     )
     data_guard_metadata = {
         key: data_guard[key]
@@ -1729,13 +1704,6 @@ def _run_dataset_locked(config: DatasetConfig) -> None:
             "numeric_key_rounding_decimals",
         )
     }
-    df_raw, unit_meta = normalize_mixed_composition_units(
-        df_raw,
-        elem_cols,
-        enabled=config.normalize_mixed_units,
-        label=config.name,
-    )
-
     print(f"\n{'='*60}")
     print(f"Dataset: {config.name}")
     print(f"  Target: {config.target_col}")
@@ -1803,16 +1771,14 @@ def _run_dataset_locked(config: DatasetConfig) -> None:
           f"final_batch = {resources['final_batch_size']}")
     llm_reliability_config = {
         "llm_retry_policy": LLM_RETRY_POLICY_VERSION,
-        "llm_retry_until_success": LLM_RETRY_UNTIL_SUCCESS,
-        "llm_strict_scoring": LLM_STRICT_SCORING,
+        "llm_retry_until_success": True,
+        "llm_strict_scoring": True,
         "llm_max_concurrency": LLM_MAX_CONCURRENCY,
         "llm_api_key_count": LLM_API_KEY_COUNT,
         "llm_per_key_concurrency": LLM_PER_KEY_CONCURRENCY,
         "llm_key_scheduler": LLM_KEY_SCHEDULER_VERSION,
         "llm_key_slot_alias": f"key_slot_{API_KEY_SLOT}",
         "dataset_key_allocation": DATASET_KEY_ALLOCATION_VERSION,
-        "dataset_queue_order": DATASET_QUEUE_ORDER_VERSION,
-        "dataset_queue_max_workers": DATASET_QUEUE_MAX_WORKERS,
         "llm_rate_limit_batch_size": LLM_RATE_LIMIT_BATCH_SIZE,
         "llm_rate_limit_sleep_seconds": LLM_RATE_LIMIT_SLEEP_SECONDS,
         "llm_retry_base_seconds": LLM_RETRY_BASE_SECONDS,
@@ -1855,8 +1821,6 @@ def _run_dataset_locked(config: DatasetConfig) -> None:
         "knowledge_tie_break": KNOWLEDGE_TIE_BREAK_VERSION,
         "knowledge_tie_salt": KNOWLEDGE_TIE_SALT,
     }
-    if unit_meta.get("applied"):
-        llm_cache_metadata["composition_unit_normalization"] = unit_meta.get("cache_key")
     llm_cache = _static_cache_path(config.name, llm_cache_metadata)
     expected_llm_candidates = _dataframe_input_records(review_df, safe_input_cols)
     knowledge_tie_break_ranks, knowledge_tie_break_audit = (
@@ -1871,7 +1835,7 @@ def _run_dataset_locked(config: DatasetConfig) -> None:
     run_identity = json.loads(json.dumps({
         "version": "calm_output_identity_v1",
         "dataset": {key: value for key, value in asdict(config).items()
-                    if key != "xlsx_path"},
+                    if key != "data_path"},
         "dataset_files": [
             _sha256_file(config.data_path),
             _sha256_file(config.data_path.with_suffix(".columns.json")),
@@ -1952,10 +1916,8 @@ def _run_dataset_locked(config: DatasetConfig) -> None:
         max_concurrency=LLM_MAX_CONCURRENCY,
         rate_limit_batch_size=LLM_RATE_LIMIT_BATCH_SIZE,
         rate_limit_sleep_seconds=LLM_RATE_LIMIT_SLEEP_SECONDS,
-        retry_until_success=LLM_RETRY_UNTIL_SUCCESS,
         retry_base_seconds=LLM_RETRY_BASE_SECONDS,
         retry_max_seconds=LLM_RETRY_MAX_SECONDS,
-        strict_scoring=LLM_STRICT_SCORING,
         min_api_keys=LLM_API_KEY_COUNT,
         per_key_concurrency=LLM_PER_KEY_CONCURRENCY,
         key_pool=shared_key_pool,
@@ -2082,9 +2044,6 @@ def _run_dataset_locked(config: DatasetConfig) -> None:
         "llm_runtime_fingerprint": llm_cache_metadata["llm_runtime_fingerprint"],
         "lambda_mode": "fixed" if FIXED_LAMBDA is not None else DEFAULT_PROTOCOL["lambda_mode"],
         "ewrc_gamma": EWRC_GAMMA,
-        "composition_unit_normalization": (
-            unit_meta.get("cache_key") if unit_meta.get("applied") else "disabled"
-        ),
         "dynamic_rescoring": (
             "disabled_for_static_control"
             if RESCORING_INTERVAL == 0
@@ -2198,7 +2157,7 @@ def _run_dataset_locked(config: DatasetConfig) -> None:
         y_run = y
         run_feature_dir = out_dir / "_feature_fits" / f"run_{run_idx:03d}"
         X_run, y_run, _ = load_external_dataset_initial_fit(
-            xlsx_path=config.data_path,
+            data_path=config.data_path,
             target_col=config.target_col,
             initial_idx=initial_idx,
             element_cols=elem_cols,
@@ -2206,7 +2165,6 @@ def _run_dataset_locked(config: DatasetConfig) -> None:
             target_cols=property_cols,
             output_dir=run_feature_dir,
             force_rerun_selection=False,
-            normalize_mixed_units=config.normalize_mixed_units,
             material_system=config.material_system,
             composition_unit=config.composition_unit,
             composition_missing_policy=config.composition_missing_policy,
@@ -2372,9 +2330,6 @@ def _run_dataset_locked(config: DatasetConfig) -> None:
             "llm_runtime_fingerprint": llm_cache_metadata["llm_runtime_fingerprint"],
             "lambda_mode": "fixed" if FIXED_LAMBDA is not None else DEFAULT_PROTOCOL["lambda_mode"],
             "ewrc_gamma": EWRC_GAMMA,
-            "composition_unit_normalization": (
-                unit_meta.get("cache_key") if unit_meta.get("applied") else "disabled"
-            ),
             "dynamic_rescoring": (
                 "disabled_for_static_control"
                 if RESCORING_INTERVAL == 0

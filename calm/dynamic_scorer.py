@@ -935,13 +935,9 @@ class DynamicLLMScorer:
         self,
         train_idx: np.ndarray,
         y_all: np.ndarray,
-        current_scores: dict[str, np.ndarray] | None = None,
-        score_overrides: dict[str, dict[int, float]] | None = None,
-        n_calibration: int = 5,
         query_indices: np.ndarray | None = None,
     ) -> tuple[str, str]:
         """Build one shared anchor-relative prompt for the current shortlist."""
-        del current_scores, score_overrides, n_calibration
         train_idx = np.asarray(train_idx, dtype=int)
         n_tested = len(train_idx)
         queries = np.asarray(
@@ -1028,48 +1024,16 @@ class DynamicLLMScorer:
         ).hexdigest()
         return progress_report, self._fingerprint(fingerprint_payload)
 
-    def build_progress_report(
-        self,
-        train_idx: np.ndarray,
-        y_all: np.ndarray,
-        current_scores: dict[str, np.ndarray] | None = None,
-        score_overrides: dict[str, dict[int, float]] | None = None,
-        n_calibration: int = 5,
-        query_indices: np.ndarray | None = None,
-    ) -> str:
-        """Build a concise progress report from measured candidates."""
-        report, _ = self.build_feedback(
-            train_idx,
-            y_all,
-            current_scores=current_scores,
-            score_overrides=score_overrides,
-            n_calibration=n_calibration,
-            query_indices=query_indices,
-        )
-        return report
-
     def rescore(
         self,
         pool_indices: np.ndarray,
-        train_idx: np.ndarray,
-        y_train: np.ndarray,
-        current_scores: dict[str, np.ndarray] | None = None,
-        score_overrides: dict[str, dict[int, float]] | None = None,
-        progress_report: str | None = None,
-        feedback_fingerprint: str = "unspecified",
+        *,
+        progress_report: str,
+        feedback_fingerprint: str,
         iteration: int | None = None,
     ) -> dict[str, np.ndarray]:
-        """Rescore the current pool subset, returning only s_phys."""
-        train_idx = np.asarray(train_idx)
+        """Rescore a shortlist using its prepared measured-feedback context."""
         progress = progress_report
-        if progress is None:
-            progress = self.build_progress_report(
-                train_idx,
-                y_train,
-                current_scores=current_scores,
-                score_overrides=score_overrides,
-                query_indices=np.asarray(pool_indices, dtype=int),
-            )
         candidate_cols = [
             col for col in self.input_cols
             if col in self.comp_df.columns and col != self.target_col

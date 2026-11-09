@@ -57,15 +57,12 @@ class SimpleMLPRegressor(nn.Module):
 class TrainConfig:
     """Shared configuration for production MLP fits and OOF calibration."""
 
-    target: str
-    seed: int = 42
     epochs: int = 100
     batch_size: int = 16
     lr: float = 3e-3
     weight_decay: float = 1e-3
     mlp_hidden_dims: Tuple[int, ...] = (64, 32, 16)
     dropout: float = 0.20
-    input_noise: float = 0.0
     warmup_epochs: int = 5
     early_stop_patience: int = 20
     grad_clip_norm: float = 1.0

@@ -1,6 +1,6 @@
 """Independent-quota API key loading and asynchronous scheduling.
 
-Secrets are read only from environment variables. Logs and public state expose
+Secrets are read only from environment variables. Logs expose
 stable aliases (``key_1``, ``key_2``), never key values or fingerprints.
 """
 
@@ -43,35 +43,30 @@ def load_api_keys(
 ) -> list[str]:
     """Load only CALM keys for the explicitly configured public provider."""
     env = os.environ if environ is None else environ
-    return _load_api_key_family(env, "CALM")
-
-
-def _load_api_key_family(env: Mapping[str, str], prefix: str) -> list[str]:
     candidates: list[str] = []
 
     for index in range(1, 33):
-        value = str(env.get(f"{prefix}_API_KEY_{index}", "")).strip()
+        value = str(env.get(f"CALM_API_KEY_{index}", "")).strip()
         if value:
             candidates.append(value)
 
-    packed = str(env.get(f"{prefix}_API_KEYS", "")).strip()
+    packed = str(env.get("CALM_API_KEYS", "")).strip()
     if packed:
         if packed.startswith("["):
             try:
                 decoded = json.loads(packed)
             except json.JSONDecodeError as exc:
-                raise ValueError(f"{prefix}_API_KEYS must be valid JSON or CSV") from exc
+                raise ValueError("CALM_API_KEYS must be valid JSON or CSV") from exc
             if not isinstance(decoded, list):
-                raise ValueError(f"{prefix}_API_KEYS JSON value must be a list")
+                raise ValueError("CALM_API_KEYS JSON value must be a list")
             candidates.extend(str(value).strip() for value in decoded)
         else:
             candidates.extend(part.strip() for part in packed.replace(";", ",").split(","))
 
-    legacy = str(env.get(f"{prefix}_API_KEY", "")).strip()
-    # The legacy variable is a fallback only. When numbered/list variables are
-    # present, an unrelated old legacy key must not silently become key_3.
-    if legacy and not candidates:
-        candidates.append(legacy)
+    single_key = str(env.get("CALM_API_KEY", "")).strip()
+    # An unrelated single key must not be appended to an explicit key list.
+    if single_key and not candidates:
+        candidates.append(single_key)
 
     keys: list[str] = []
     seen: set[str] = set()
@@ -155,23 +150,6 @@ class AsyncAPIKeyPool:
     @property
     def key_count(self) -> int:
         return len(self._states)
-
-    def public_state(self) -> list[dict]:
-        """Return audit state without exposing any secret material."""
-        now = time.monotonic()
-        with self._lock:
-            return [
-                {
-                    "alias": state.alias,
-                    "in_flight": state.in_flight,
-                    "cooldown_remaining_seconds": max(
-                        0.0, state.cooldown_until - now
-                    ),
-                    "disabled": state.disabled,
-                    "consecutive_failures": state.consecutive_failures,
-                }
-                for state in self._states
-            ]
 
     async def open_session(self) -> None:
         loop = asyncio.get_running_loop()

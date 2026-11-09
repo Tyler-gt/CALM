@@ -28,24 +28,10 @@ from common.llm.key_pool import (
 )
 
 
-NO_RETRIEVAL_PROMPT_PLACEHOLDER = (
-    "[NO-RETRIEVAL CONTROL] Literature retrieval is disabled for this run. "
-    "No paper snippets or source-derived target values were supplied. "
-    "Use only the dataset profile, candidate inputs, measured active-learning "
-    "feedback, and general prior knowledge; do not imply that a paper was "
-    "retrieved or cited."
-)
-
 _COMPOSITION_UNIT_LABELS = {
     "wt.%": "weight percent",
     "at.%": "atomic percent",
 }
-
-
-def _validate_retrieval_mode(retrieval_mode: str) -> str:
-    if str(retrieval_mode).strip() != "disabled":
-        raise ValueError("CALM uses no literature retrieval; retrieval_mode must be 'disabled'")
-    return "disabled"
 
 
 def _validate_composition_unit(composition_unit: str) -> str:
@@ -107,15 +93,6 @@ def _validate_scoring_response(result: dict) -> None:
     ):
         raise ValueError("LLM scoring response s_phys must be a finite number in [0, 1]")
 
-# ═══════════════════════════════════════════════════════════════════
-# Column and input helpers
-# ═══════════════════════════════════════════════════════════════════
-
-
-# ═══════════════════════════════════════════════════════════════════
-# Helpers
-# ═══════════════════════════════════════════════════════════════════
-
 def _jsonable_sample(value):
     if pd.isna(value):
         return None
@@ -152,10 +129,8 @@ class LLMReviewer:
         max_concurrency: int = 20,
         rate_limit_batch_size: int = 20,
         rate_limit_sleep_seconds: float = 10.0,
-        retry_until_success: bool = False,
         retry_base_seconds: float = 1.0,
         retry_max_seconds: float = 60.0,
-        strict_scoring: bool = False,
         api_keys: list[str] | None = None,
         min_api_keys: int = 1,
         per_key_concurrency: int = 4,
@@ -175,14 +150,11 @@ class LLMReviewer:
         self.max_concurrency = max(1, int(max_concurrency))
         self.rate_limit_batch_size = max(1, int(rate_limit_batch_size))
         self.rate_limit_sleep_seconds = max(0.0, float(rate_limit_sleep_seconds))
-        self.retry_until_success = bool(retry_until_success)
         self.retry_base_seconds = max(0.0, float(retry_base_seconds))
         self.retry_max_seconds = max(
             self.retry_base_seconds,
             float(retry_max_seconds),
         )
-        self.strict_scoring = bool(strict_scoring)
-        self.retrieval_mode = "disabled"
 
         if key_pool is not None:
             if key_pool.key_count < int(min_api_keys):
@@ -207,7 +179,6 @@ class LLMReviewer:
         self.base_url = self.key_pool.base_url
         # Precomputed profile text
         self._element_profile: str = ""
-        self._process_profile: str = ""
         self._history_stats: str = ""
         self._target_info: str = ""
 
@@ -240,8 +211,6 @@ class LLMReviewer:
         self.target_col = target_col or self.target_col
         if composition_unit is not None:
             self.composition_unit = _validate_composition_unit(composition_unit)
-        elif not hasattr(self, "composition_unit"):
-            self.composition_unit = "wt.%"
 
         # Column roles come from the caller's audited dataset registration.
         if element_cols is not None:
@@ -264,24 +233,16 @@ class LLMReviewer:
             df,
             self.element_cols,
             self.process_cols,
-            self.target_col,
             composition_unit=self.composition_unit,
         )
         self._history_stats = build_history_stats(
-            df, self.element_cols, self.target_col
+            df, self.element_cols
         )
 
         # Expose target metadata without the full-dataset target-value distribution.
         if self.target_col:
-            # Production construction always supplies the registered direction.
-            # A few focused diagnostics use ``object.__new__``, so retain a
-            # maximize default for those deliberately partial reviewer objects.
-            objective_direction = getattr(
-                self, "objective_direction", "maximize"
-            )
-            objective_description = getattr(
-                self, "objective_description", ""
-            )
+            objective_direction = self.objective_direction
+            objective_description = self.objective_description
             direction = objective_direction.upper()
             relation = (
                 "higher raw numerical values are better"
@@ -357,20 +318,14 @@ class LLMReviewer:
         """
         candidate_inputs = self._candidate_inputs(candidate)
 
-        # Keep the original no-retrieval prompt content used by the paper.
-        _validate_retrieval_mode(self.retrieval_mode)
-        snippets = NO_RETRIEVAL_PROMPT_PLACEHOLDER
-
         candidate_json = json.dumps(candidate_inputs, ensure_ascii=False)
 
         messages = get_messages(
             material_system=self.material_system,
             element_profile=self._element_profile,
-            process_profile=self._process_profile,
             target_info=self._target_info,
             history_stats=self._history_stats,
             candidate_json=candidate_json,
-            reference_snippets=snippets,
             progress_report=progress_report,
         )
 
@@ -386,91 +341,26 @@ class LLMReviewer:
         if not raw:
             raise ValueError("empty LLM response")
 
-        # Parse the response.
-        fallback = {
-            "principles": [],
-            "s_target_raw": 0,
-            "s_general_plausibility_raw": 0,
-            "s_phys_raw": 0,
-            "s_phys": 0.0,
-            "off_target_notes": [],
-            "reason": "parse error",
-        }
         try:
             result = parse_json_object(raw)
         except ValueError as exc:
-            if self.strict_scoring:
-                raise ValueError("LLM scoring response must be one valid JSON object") from exc
-            result = fallback.copy()
-
-        if self.strict_scoring:
-            _validate_scoring_response(result)
+            raise ValueError("LLM scoring response must be one valid JSON object") from exc
+        _validate_scoring_response(result)
 
         result.setdefault("principles", [])
-        has_target_score = "s_target_raw" in result
-        has_raw_score = "s_phys_raw" in result
-        has_normalized_score = "s_phys" in result
-        result.setdefault("s_target_raw", fallback["s_target_raw"])
-        result.setdefault(
-            "s_general_plausibility_raw",
-            fallback["s_general_plausibility_raw"],
-        )
-        result.setdefault("s_phys_raw", fallback["s_phys_raw"])
-        result.setdefault("s_phys", fallback["s_phys"])
-        result.setdefault("off_target_notes", fallback["off_target_notes"])
-
-        raw_score = (
-            result.get("s_target_raw")
-            if has_target_score
-            else result.get("s_phys_raw")
-        )
-        if has_target_score or has_raw_score:
-            try:
-                raw_float = float(raw_score)
-                if not math.isfinite(raw_float):
-                    raise ValueError("raw score is not finite")
-                if self.strict_scoring and not 0.0 <= raw_float <= 100.0:
-                    raise ValueError("raw score is outside [0, 100]")
-                raw_float = min(max(raw_float, 0.0), 100.0)
-                result["s_target_raw"] = int(round(raw_float))
-                result["s_phys_raw"] = result["s_target_raw"]
-                result["s_phys"] = result["s_target_raw"] / 100.0
-            except (ValueError, TypeError):
-                if self.strict_scoring:
-                    raise ValueError("LLM scoring response contains an invalid raw score")
-                has_target_score = False
-                has_raw_score = False
-
-        if not has_target_score and not has_raw_score:
-            if self.strict_scoring and not has_normalized_score:
-                raise ValueError("LLM scoring response is missing a target score")
-            try:
-                score = float(result["s_phys"])
-                if not math.isfinite(score):
-                    raise ValueError("normalized score is not finite")
-                if self.strict_scoring and not 0.0 <= score <= 1.0:
-                    raise ValueError("normalized score is outside [0, 1]")
-                score = min(max(score, 0.0), 1.0)
-                result["s_phys"] = score
-                result["s_target_raw"] = int(round(score * 100.0))
-                result["s_phys_raw"] = result["s_target_raw"]
-            except (ValueError, TypeError):
-                if self.strict_scoring:
-                    raise ValueError(
-                        "LLM scoring response contains an invalid normalized score"
-                    )
-                result["s_target_raw"] = fallback["s_target_raw"]
-                result["s_phys_raw"] = fallback["s_phys_raw"]
-                result["s_phys"] = fallback["s_phys"]
-
-        try:
-            plaus = float(result["s_general_plausibility_raw"])
-            if not math.isfinite(plaus):
-                raise ValueError("plausibility score is not finite")
-            result["s_general_plausibility_raw"] = int(round(min(max(plaus, 0.0), 100.0)))
-        except (ValueError, TypeError):
-            result["s_general_plausibility_raw"] = result["s_target_raw"]
-        result.setdefault("reason", fallback["reason"])
+        result.setdefault("s_general_plausibility_raw", 0)
+        result.setdefault("off_target_notes", [])
+        if "s_target_raw" in result or "s_phys_raw" in result:
+            score = result.get("s_target_raw", result.get("s_phys_raw"))
+            result["s_target_raw"] = score
+            result["s_phys_raw"] = score
+            result["s_phys"] = score / 100.0
+        elif "s_phys" in result:
+            result["s_phys"] = float(result["s_phys"])
+            result["s_target_raw"] = int(round(result["s_phys"] * 100.0))
+            result["s_phys_raw"] = result["s_target_raw"]
+        else:
+            raise ValueError("LLM scoring response is missing a target score")
         result["_key_alias"] = key_alias
 
         result["_refs"] = []
@@ -585,8 +475,6 @@ class LLMReviewer:
                                 flush=True,
                             )
                             raise
-                        if not self.retry_until_success and failures >= 4:
-                            raise
                         exponent = min(failures - 1, 10)
                         delay = min(
                             self.retry_max_seconds,
@@ -594,9 +482,8 @@ class LLMReviewer:
                         )
                         if delay > 0:
                             delay += random.uniform(0.0, min(1.0, delay * 0.10))
-                        retry_limit = "∞" if self.retry_until_success else "3"
                         print(
-                            f" [memory retry {failures}/{retry_limit} in "
+                            f" [memory retry {failures} in "
                             f"{delay:.1f}s: {exc}]",
                             flush=True,
                         )
@@ -670,8 +557,6 @@ class LLMReviewer:
                                 flush=True,
                             )
                             raise
-                        if not self.retry_until_success and failures >= 4:
-                            raise
 
                         exponent = min(failures - 1, 10)
                         delay = min(
@@ -680,9 +565,8 @@ class LLMReviewer:
                         )
                         if delay > 0:
                             delay += random.uniform(0.0, min(1.0, delay * 0.10))
-                        retry_limit = "∞" if self.retry_until_success else "3"
                         print(
-                            f" [retry {failures}/{retry_limit} in {delay:.1f}s: {e}]",
+                            f" [retry {failures} in {delay:.1f}s: {e}]",
                             flush=True,
                         )
                         await asyncio.sleep(delay)
