@@ -18,14 +18,24 @@ Inputs are raw compositions, available processing/testing conditions, categorica
 
 ## Installation
 
-Use **Python 3.9.21**. The reference PyTorch build is **2.7.0 with CUDA 12.8** for Linux or Windows:
+Use a **Python 3.9** environment; the reference environment used **3.9.21**. Download or clone this repository and run the commands below from its root directory. To reproduce only the bundled figures and tables, use the [lightweight installation below](#reproduce-the-paper-figures).
+
+For new experiments, install **PyTorch 2.7.0** for your operating system and hardware using the [official instructions](https://pytorch.org/get-started/previous-versions/#v270). For example, a CPU-only installation on Linux or Windows:
 
 ```bash
-python -m pip install torch==2.7.0 --index-url https://download.pytorch.org/whl/cu128
+python -m pip install torch==2.7.0 --index-url https://download.pytorch.org/whl/cpu
+```
+
+Then install the remaining dependencies:
+
+```bash
 python -m pip install -r requirements.txt
 ```
 
-The PyTorch command follows the [official installation instructions](https://pytorch.org/get-started/previous-versions/#v270).
+CUDA is optional. The reference environment used the CUDA 12.8 build; choose a compatible build for your own hardware. The model uses CUDA when available and otherwise runs on the CPU.
+
+<details>
+<summary>Windows Conda troubleshooting: duplicate OpenMP runtimes</summary>
 
 If a Windows Conda environment reports duplicate OpenMP runtimes (`OMP: Error #15`), set [MKL's sequential threading layer](https://www.intel.com/content/www/us/en/docs/onemkl/developer-guide-windows/2026-0/dynamic-select-the-interface-and-threading-layer.html) before starting Python:
 
@@ -35,11 +45,14 @@ $env:MKL_THREADING_LAYER = "SEQUENTIAL"
 
 This setting applies to the current shell and runs MKL operations in single-threaded mode.
 
+</details>
+
 ## Reproduce the paper figures
 
-Prepared inputs for all nine tasks and the frozen results needed for the manuscript figures and tables are included. To generate the figures and table data without API calls or model training:
+Prepared inputs for all nine tasks and the frozen results needed for the manuscript figures and tables are included. This workflow needs only NumPy, pandas and Matplotlib, without PyTorch, a GPU or API access:
 
 ```bash
+python -m pip install -r requirements-figures.txt
 python reproduce/figures.py --output-dir outputs/paper_figures
 ```
 

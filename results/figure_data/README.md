@@ -2,9 +2,10 @@
 
 These compact extracts supplement the complete paired benchmark and ablation results in the parent directory. They reproduce the figures and tables in the final manuscript and its English supplementary Sections S15-S17 without API requests, model training or research-archive files.
 
-From the repository root, run:
+From the repository root, install the lightweight plotting dependencies and run:
 
 ```bash
+python -m pip install -r requirements-figures.txt
 python reproduce/figures.py --output-dir outputs/paper_figures
 ```
 

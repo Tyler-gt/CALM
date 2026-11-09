@@ -1,12 +1,10 @@
 # CALM reference environment: Python 3.9.21.
-# Install PyTorch from the cu128 index first; see README.md.
-numpy==1.26.3
-pandas==2.3.3
+# Install the PyTorch 2.7.0 build for your hardware first; see README.md.
+-r requirements-figures.txt
 scipy==1.13.1
 scikit-learn==1.5.1
 lightgbm==4.6.0
-torch==2.7.0+cu128
-matplotlib==3.9.2
+torch==2.7.0
 openpyxl==3.1.5
 openai==2.36.0
 python-dotenv==1.2.1
