@@ -47,15 +47,17 @@ The command generates main Figures 1–9, Tables 1–2, supplementary Figures S1
 
 ## API configuration
 
-Copy [`common/llm/.env.example`](common/llm/.env.example) to `common/llm/.env` and fill in the key:
+The paper used **DeepSeek V4 Flash**, recorded under the deployment identifier `deepseek-v4-flash-ascend`, at temperature 0 with retrieval disabled.
+
+For new experiments, copy [`common/llm/.env.example`](common/llm/.env.example) to `common/llm/.env` and configure your own provider account. Example using the [official DeepSeek API](https://api-docs.deepseek.com/):
 
 ```dotenv
-CALM_API_BASE_URL=https://api.example.com/v1
-CALM_LLM_MODEL=deepseek-v4-flash-ascend
+CALM_API_BASE_URL=https://api.deepseek.com
+CALM_LLM_MODEL=deepseek-flash
 CALM_API_KEY=
 ```
 
-The endpoint must support OpenAI-compatible chat completions with JSON-object responses. The example uses the paper's service and model; change both for another provider. Shell variables override `.env`. For multiple distinct keys, number them consecutively from `CALM_API_KEY_1` to `CALM_API_KEY_4` and select one with `--api-key-slot`. Credentials stay local.
+Set `CALM_LLM_MODEL` to a model ID available from your provider. The official `deepseek-flash` alias follows the provider's current model version and differs from the paper's recorded deployment. Other providers must support OpenAI-compatible chat completions with JSON-object responses. Shell variables override `.env`; configuration uses the `CALM_*` variables. Reproducing the bundled paper figures requires no API access.
 
 ## Run the paper comparisons
 

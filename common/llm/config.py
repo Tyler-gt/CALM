@@ -9,8 +9,9 @@ from urllib.parse import urlsplit
 from dotenv import load_dotenv
 
 
-DEFAULT_API_BASE_URL = "https://api.example.com/v1"
-DEFAULT_LLM_MODEL = "deepseek-v4-flash-ascend"
+# Public defaults for new experiments; historical deployment IDs stay in results.
+DEFAULT_API_BASE_URL = "https://api.deepseek.com"
+DEFAULT_LLM_MODEL = "deepseek-flash"
 
 # Read only this checkout's file. Existing shell variables always take priority.
 load_dotenv(Path(__file__).resolve().parent / ".env", override=False)
@@ -46,8 +47,6 @@ def validate_api_base_url(value: str) -> str:
 def get_api_base_url() -> str:
     value = (
         os.environ.get("CALM_API_BASE_URL")
-        or os.environ.get("USTC_DEEPSEEK_API_BASE_URL")
-        or os.environ.get("USTC_DEEPSEEK_BASE_URL")
         or DEFAULT_API_BASE_URL
     )
     return validate_api_base_url(value)
@@ -56,7 +55,6 @@ def get_api_base_url() -> str:
 def get_llm_model() -> str:
     value = (
         os.environ.get("CALM_LLM_MODEL")
-        or os.environ.get("USTC_DEEPSEEK_MODEL")
         or DEFAULT_LLM_MODEL
     )
     model = str(value).strip()

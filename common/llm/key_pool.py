@@ -45,10 +45,9 @@ class NoAvailableAPIKeyError(RuntimeError):
 def load_ustc_api_keys(
     environ: Mapping[str, str] | None = None,
 ) -> list[str]:
-    """Load CALM keys, falling back to the legacy USTC variable family."""
+    """Load only CALM keys for the explicitly configured public provider."""
     env = os.environ if environ is None else environ
-    keys = _load_api_key_family(env, "CALM")
-    return keys or _load_api_key_family(env, "USTC_DEEPSEEK")
+    return _load_api_key_family(env, "CALM")
 
 
 def _load_api_key_family(env: Mapping[str, str], prefix: str) -> list[str]:
@@ -124,7 +123,7 @@ class AsyncUSTCKeyPool:
     ) -> None:
         unique_keys = list(dict.fromkeys(key for key in api_keys if key))
         if not unique_keys:
-            raise ValueError("AsyncUSTCKeyPool requires at least one API key")
+            raise ValueError("API key pool requires at least one API key")
         if key_aliases is None:
             aliases = [f"key_{index + 1}" for index in range(len(unique_keys))]
         else:
@@ -229,7 +228,7 @@ class AsyncUSTCKeyPool:
                 enabled = [state for state in self._states if not state.disabled]
                 if not enabled:
                     raise NoAvailableAPIKeyError(
-                        "All configured USTC API keys are disabled"
+                        "All configured API keys are disabled"
                     )
                 candidates = [
                     (index, state)
@@ -337,7 +336,7 @@ class AsyncUSTCKeyPool:
                     f"{state.alias} was disabled; retrying with another key"
                 ) from exc
             raise NoAvailableAPIKeyError(
-                "All configured USTC API keys failed authentication/permission checks"
+                "All configured API keys failed authentication/permission checks"
             ) from exc
         except (
             APITimeoutError,

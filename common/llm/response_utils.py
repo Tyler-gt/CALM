@@ -29,7 +29,7 @@ def parse_json_object(text: str) -> dict:
 
 
 def extract_message_text(message: Any) -> str:
-    """Return text from standard content or USTC reasoning_content fallback."""
+    """Return text from standard content or reasoning_content fallback."""
     content = getattr(message, "content", None)
     if isinstance(content, str) and content.strip():
         return content
