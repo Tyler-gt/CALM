@@ -1036,10 +1036,10 @@ def _llm_detect_column_roles(
     )
 
     from openai import OpenAI
-    from common.llm.key_pool import require_ustc_api_keys
+    from common.llm.key_pool import require_api_keys
     from common.llm.response_utils import extract_message_text
     client = OpenAI(
-        api_key=api_key or require_ustc_api_keys(1)[0],
+        api_key=api_key or require_api_keys(1)[0],
         base_url=base_url,
     )
     import time as _time

@@ -102,7 +102,7 @@ from calm.strategies.llm_rank import LLMRank
 from calm.strategies.llm_dynamic import LLMDynamic
 from calm.strategies.calm import CALMAcquisition
 from calm.strategies.calm_static import CALMStatic
-from common.llm.key_pool import AsyncUSTCKeyPool, require_ustc_api_keys
+from common.llm.key_pool import AsyncAPIKeyPool, require_api_keys
 
 EXTERNAL = PROJECT / "dabase"
 CURATED = EXTERNAL / "curated"
@@ -1383,7 +1383,7 @@ def precompute_llm_scores(
     objective_description: str = "",
     cache_metadata: dict | None = None,
     forbidden_target_cols: list[str] | None = None,
-    key_pool: AsyncUSTCKeyPool | None = None,
+    key_pool: AsyncAPIKeyPool | None = None,
     evidence_path: Path | None = None,
 ) -> dict[str, np.ndarray]:
     # Main comparisons and ablations share this identity. Keep the lock across
@@ -1413,7 +1413,7 @@ def _precompute_llm_scores_locked(
     objective_description: str = "",
     cache_metadata: dict | None = None,
     forbidden_target_cols: list[str] | None = None,
-    key_pool: AsyncUSTCKeyPool | None = None,
+    key_pool: AsyncAPIKeyPool | None = None,
     evidence_path: Path | None = None,
 ) -> dict[str, np.ndarray]:
     evidence_path = evidence_path or _llm_evidence_path(cache_path)
@@ -1899,9 +1899,9 @@ def _run_dataset_locked(config: DatasetConfig) -> None:
 
     # Registered local inputs and existing outputs are checked before loading
     # credentials, constructing reviewers, or making a scoring request.
-    available_keys = require_ustc_api_keys(API_KEY_SLOT)
+    available_keys = require_api_keys(API_KEY_SLOT)
     api_keys = [available_keys[API_KEY_SLOT - 1]]
-    shared_key_pool = AsyncUSTCKeyPool(
+    shared_key_pool = AsyncAPIKeyPool(
         api_keys,
         base_url=LLM_API_BASE_URL,
         key_aliases=[f"key_slot_{API_KEY_SLOT}"],

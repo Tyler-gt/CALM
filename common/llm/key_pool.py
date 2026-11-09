@@ -25,13 +25,9 @@ from openai import (
     RateLimitError,
 )
 from common.llm.config import (
-    DEFAULT_API_BASE_URL,
     get_api_base_url,
     validate_api_base_url,
 )
-
-
-USTC_BASE_URL = DEFAULT_API_BASE_URL  # Compatibility for existing callers.
 
 
 class RetryableAPIKeyError(RuntimeError):
@@ -42,7 +38,7 @@ class NoAvailableAPIKeyError(RuntimeError):
     """Every configured key is permanently disabled."""
 
 
-def load_ustc_api_keys(
+def load_api_keys(
     environ: Mapping[str, str] | None = None,
 ) -> list[str]:
     """Load only CALM keys for the explicitly configured public provider."""
@@ -86,8 +82,8 @@ def _load_api_key_family(env: Mapping[str, str], prefix: str) -> list[str]:
     return keys
 
 
-def require_ustc_api_keys(min_count: int = 1) -> list[str]:
-    keys = load_ustc_api_keys()
+def require_api_keys(min_count: int = 1) -> list[str]:
+    keys = load_api_keys()
     if len(keys) < int(min_count):
         raise RuntimeError(
             f"Expected at least {int(min_count)} independent API keys; "
@@ -108,7 +104,7 @@ class _KeyState:
     last_selected: int = 0
 
 
-class AsyncUSTCKeyPool:
+class AsyncAPIKeyPool:
     """Least-loaded scheduler for API keys with independent quotas."""
 
     def __init__(

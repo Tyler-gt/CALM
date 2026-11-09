@@ -22,9 +22,9 @@ from common.llm.prompts import (
 from common.llm.response_utils import extract_message_text, parse_json_object
 from common.llm.config import get_llm_model
 from common.llm.key_pool import (
-    AsyncUSTCKeyPool,
+    AsyncAPIKeyPool,
     NoAvailableAPIKeyError,
-    require_ustc_api_keys,
+    require_api_keys,
 )
 
 
@@ -62,7 +62,7 @@ def _is_permanent_llm_error(exc: Exception) -> bool:
     """Errors that cannot become successful without changing configuration."""
     return isinstance(exc, NoAvailableAPIKeyError) or (
         isinstance(exc, APIStatusError)
-        and not AsyncUSTCKeyPool.is_retryable_status_error(exc)
+        and not AsyncAPIKeyPool.is_retryable_status_error(exc)
     )
 
 
@@ -159,7 +159,7 @@ class LLMReviewer:
         api_keys: list[str] | None = None,
         min_api_keys: int = 1,
         per_key_concurrency: int = 4,
-        key_pool: AsyncUSTCKeyPool | None = None,
+        key_pool: AsyncAPIKeyPool | None = None,
     ) -> None:
         self.model = get_llm_model() if model is None else model
         self.temperature = temperature
@@ -194,13 +194,13 @@ class LLMReviewer:
             resolved_keys = (
                 list(api_keys)
                 if api_keys is not None
-                else require_ustc_api_keys(min_api_keys)
+                else require_api_keys(min_api_keys)
             )
             if len(set(resolved_keys)) < int(min_api_keys):
                 raise RuntimeError(
                     f"LLMReviewer requires {int(min_api_keys)} independent API keys"
                 )
-            self.key_pool = AsyncUSTCKeyPool(
+            self.key_pool = AsyncAPIKeyPool(
                 resolved_keys,
                 per_key_concurrency=per_key_concurrency,
             )
