@@ -74,7 +74,24 @@ python run.py --dataset 2xxx_T6__UTS --experiment supplementary
 
 Initialization uses 10% of the candidate pool, batches use 2%, and the total measurement budget is 40%, including initialization. Counts follow the paper's rounding rules and the final batch is truncated. Strategies share initial sets, inputs and measurement schedules, then learn from their own observations.
 
-Default seeds match the selected manuscript cohort in [`calm/benchmark.py`](calm/benchmark.py), including the Mg UTS seed group and recorded run replacements. The cohort is descriptive and was selected after inspecting results. `--n-runs` takes the first requested paper runs; `--seed 42` instead generates a new paired experiment. Fresh API responses and the revised implementation can produce different trajectories; use the bundled results to reproduce the manuscript figures.
+The actual per-run seeds are listed below in paper-run order and defined in [`calm/benchmark.py`](calm/benchmark.py). `--n-runs` uses the first requested entries; `--seed <value>` generates a new paired experiment. Run provenance is documented in [`results/README.md`](results/README.md). Fresh API responses and the revised implementation can produce different trajectories; use the bundled results to reproduce the manuscript figures.
+
+<details>
+<summary>Actual seeds used in the paper runs</summary>
+
+| Task | Seeds, in run order |
+|---|---|
+| `Cu_alloys__EC` | 1608637542, 1273642419, 1935803228, 787846414, 996406378, 1201263687, 423734972, 415968276, 670094950, 1914837113 |
+| `HEA_Invar__TEC` | 1608637542, 1273642419, 1935803228, 787846414, 996406378, 1201263687, 423734972, 415968276, 670094950, 1914837113 |
+| `MPEA__UTS` | 1608637542, 1273642419, 1935803228, 787846414, 996406378, 1201263687, 423734972, 415968276, 670094950, 669991378 |
+| `mg_alloy__UTS` | 1782176804, 1028655772, 465679224, 1114009941, 678236246, 1400879312, 1283215481, 1709079418, 1324328782, 78442560 |
+| `Ti_alloy__YS` | 1608637542, 1273642419, 1935803228, 787846414, 996406378, 1201263687, 423734972, 415968276, 670094950, 1914837113 |
+| `Ti_alloy__UTS` | 1608637542, 1273642419, 1935803228, 787846414, 996406378, 1201263687, 423734972, 415968276, 670094950, 1914837113 |
+| `mg_alloy__YS` | 1608637542, 1273642419, 669991378, 787846414, 996406378, 1201263687, 423734972, 415968276, 670094950, 1914837113 |
+| `2xxx_T6__EL` | 1608637542, 1273642419, 1935803228, 787846414, 996406378, 1201263687, 423734972, 415968276, 670094950, 1914837113 |
+| `2xxx_T6__UTS` | 1608637542, 1273642419, 1935803228, 787846414, 996406378, 1201263687, 423734972, 415968276, 669991378, 1914837113 |
+
+</details>
 
 ## Module ablations
 

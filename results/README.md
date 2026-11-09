@@ -7,7 +7,7 @@ These files contain the numerical results used by the current manuscript. They s
 - `ablations.json` contains 450 run summaries and their 7,150 per-round curve records for five module configurations, together with the reported task statistics and comparisons. The archive retains the recorded reuse of main full/static runs and the offline control with both FSR and EWRC disabled.
 - `manifest.json` records the original and published file hashes, manuscript identity and transformations made for publication.
 
-The historical strategy names `Hybrid` and `Hybrid-static` mean CALM and CALM-static. Main-paper comparisons use CALM and eight baselines; CALM-static remains available for supplementary analyses. The selected cohort is descriptive and includes the documented post-hoc run replacements and the separate Mg UTS seed group. Superseded sensitivity/status snapshots and unused legacy inferential summaries are omitted from this publication view; they remain unchanged in the original research archive.
+The historical strategy names `Hybrid` and `Hybrid-static` mean CALM and CALM-static. Main-paper comparisons use CALM and eight baselines; CALM-static remains available for supplementary analyses. The selected cohort is descriptive and includes the documented post-hoc run replacements. Superseded sensitivity/status snapshots and unused legacy inferential summaries are omitted from this publication view; they remain unchanged in the original research archive.
 
 Candidate indices are zero-based positions after filtering the registered CSV to rows with a numeric target value, preserving CSV order. The data file hash in each task's summary binds that interpretation. The final Cu result includes all ten runs; the earlier nine-run Cu snapshot is not used.
 

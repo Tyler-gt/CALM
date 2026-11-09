@@ -1,9 +1,4 @@
-"""Paired run identities used in the manuscript's descriptive nine-task cohort.
-
-The cohort includes post-hoc run selection; these are not preregistered seeds.
-Mg UTS uses master seed 20260902. The other tasks derive from master seed 42.
-Source run numbers retain the MPEA, Mg YS and Al UTS replacements.
-"""
+"""Actual per-run seeds and source run numbers for the nine manuscript tasks."""
 from __future__ import annotations
 
 import numpy as np
