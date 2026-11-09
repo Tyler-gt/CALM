@@ -14,9 +14,10 @@ import torch.nn as nn
 class SimpleMLPRegressor(nn.Module):
     """Small standardized tabular MLP used by NN-UCB and CALM.
 
-    Input imputation and standardization are fitted outside the module on the
-    current labelled set. Dropout is deliberately kept in every hidden block
-    so inference can obtain predictive dispersion through MC sampling.
+    Preprocessing is fitted outside the module: initial imputation uses the
+    full candidate-pool X medians, while scaling uses only the current training
+    rows (or OOF training fold). Dropout is kept in every hidden block so
+    inference can obtain predictive dispersion through MC sampling.
     """
 
     def __init__(

@@ -110,7 +110,7 @@ class CALMAcquisition(AcquisitionStrategy):
         self._last_ensemble_disagreement_mean: float = 0.0
         self._last_ensemble_within_sigma_mean: float = 0.0
 
-        # NN 专用
+        # NN-specific settings
         self._nn_model: nn.Module | None = None
         self._nn_feature_cols: list[str] | None = None
         self._nn_imputer: SimpleImputer | None = None
@@ -119,7 +119,7 @@ class CALMAcquisition(AcquisitionStrategy):
         self._y_std: float = 1.0
         self._device: torch.device | None = None
 
-        # 树模型专用
+        # Tree-model settings
         self._gbdt_model: LGBMRegressor | None = None
         self._gbdt_models: list[LGBMRegressor] = []
         self._rfr_model: RandomForestRegressor | None = None
@@ -309,7 +309,7 @@ class CALMAcquisition(AcquisitionStrategy):
         self._all_scores = all_scores
 
     # ═══════════════════════════════════════════════════════════════════
-    # fit: 训练所有候选代理模型 → 定期 OOF 评估 → 软权重组合
+    # fit: train candidate surrogates -> periodic OOF evaluation -> soft ensemble
     # ═══════════════════════════════════════════════════════════════════
 
     def fit(self, X: pd.DataFrame, y: np.ndarray) -> None:
@@ -377,7 +377,7 @@ class CALMAcquisition(AcquisitionStrategy):
         try:
             self._gpr_model.fit(X_scaled, y.ravel())
         except Exception:
-            self._gpr_model = None  # 样本太少时 GP 可能失败
+            self._gpr_model = None  # GP fitting may fail with too few samples.
 
     # ── NN ────────────────────────────────────────────────────────────
 
@@ -478,7 +478,7 @@ class CALMAcquisition(AcquisitionStrategy):
         self._nn_model = model
 
     # ═══════════════════════════════════════════════════════════════════
-    # OOF 评估: 高值加权误差 → 平滑代理权重
+    # OOF evaluation: high-value-weighted error -> smooth surrogate weights
     # ═══════════════════════════════════════════════════════════════════
 
     def _available_surrogates(self) -> dict[str, object]:
@@ -665,7 +665,7 @@ class CALMAcquisition(AcquisitionStrategy):
         y_train: np.ndarray,
         X_pool: pd.DataFrame,
     ) -> tuple[np.ndarray, np.ndarray]:
-        """对单个代理模型做快速训练+预测, 返回 (μ, σ)."""
+        """Quickly fit and predict with one surrogate, returning (mu, sigma)."""
         if sname == "gbdt":
             imp = SimpleImputer(strategy="median")
             Xt = imp.fit_transform(X_train.values)
@@ -712,7 +712,7 @@ class CALMAcquisition(AcquisitionStrategy):
             return mu.ravel(), sigma
 
         elif sname == "nn":
-            # NN CV: 简化版, 重用主训练逻辑
+            # Simplified NN cross-validation reusing the main training logic.
             return self._nn_cv_predict(X_train, y_train, X_pool)
 
         raise ValueError(f"Unknown surrogate: {sname}")
@@ -723,7 +723,7 @@ class CALMAcquisition(AcquisitionStrategy):
         y_train: np.ndarray,
         X_pool: pd.DataFrame,
     ) -> tuple[np.ndarray, np.ndarray]:
-        """NN CV fold 快速训练+预测."""
+        """Quickly fit and predict for one NN cross-validation fold."""
         from common.nn_ensemble.model import (
             SimpleMLPRegressor,
             set_global_seed,
@@ -1450,7 +1450,7 @@ class CALMAcquisition(AcquisitionStrategy):
         return mu, sigma
 
     def _nn_predict(self, pool_X: pd.DataFrame) -> tuple[np.ndarray, np.ndarray]:
-        """MC Dropout 预测."""
+        """Predict with MC Dropout."""
         if self._nn_model is None:
             raise RuntimeError("NN model not trained")
 

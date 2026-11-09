@@ -22,4 +22,6 @@ Source license texts: [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.
 
 The tables are already deduplicated. Runtime loading must preserve their composition units and stored target values. Unreported composition or process fields remain unknown rather than zero. Al UTS and EL share one table; two response targets do not constitute independent datasets.
 
+The bundled JSON records retain the preparation hashes and source paths. Some paths refer to original audit materials that are not included in this release; they document provenance and are not required runtime inputs.
+
 HEA-Invar TEC and MPEA UTS are the two manuscript tasks whose prepared inputs are not bundled. Their sources are Rao et al., Science 378, 78–85 (2022), and Borg et al., Scientific Data 7, 430 (2020), respectively. Place the prepared HEA_Invar__TEC.csv or MPEA__Mechanical.csv and matching column/deduplication JSON files under dabase/ before running those tasks; source terms continue to apply. Original workbooks, downloaded source files and full experiment-result archives are also not bundled.

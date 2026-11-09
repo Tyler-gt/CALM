@@ -11,7 +11,7 @@ import os
 import sys
 import time
 from collections import Counter
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from functools import lru_cache
 from pathlib import Path
 from typing import Callable
@@ -75,6 +75,7 @@ from calm.experiment import (
     resolve_resource_allocation,
 )
 from calm.benchmark import PAPER_RUNS, paired_seeds
+from calm.file_lock import exclusive_file_lock
 from calm.metrics import compute_stats
 from calm.plot import plot_convergence
 from calm.reproducibility import (
@@ -150,6 +151,7 @@ LLM_RATE_LIMIT_SLEEP_SECONDS = float(
 LLM_RETRY_BASE_SECONDS = float(DEFAULT_PROTOCOL["llm_retry_base_seconds"])
 LLM_RETRY_MAX_SECONDS = float(DEFAULT_PROTOCOL["llm_retry_max_seconds"])
 API_KEY_SLOT = 1
+OUTPUT_ROOT: Path | None = None
 STRATEGY_SEED_OFFSETS = {
     "Random": 101,
     "GPR-UCB": 211,
@@ -171,7 +173,7 @@ STRATEGY_SEED_OFFSETS = {
 
 @dataclass
 class DatasetConfig:
-    """数据集最小描述 — 元素列和工艺列自动检测, 无需手写."""
+    """Dataset specification with element and process roles from audited sidecars."""
     name: str
     # Legacy public field name retained for compatibility; CSV is also valid.
     xlsx_path: Path
@@ -179,9 +181,9 @@ class DatasetConfig:
     composition_unit: str
     objective_direction: str
     objective_description: str = ""
-    material_system: str = ""          # LLM 领域知识提示 (可选)
-    target_label: str = ""             # 绘图 y 轴标签 (可选, 默认=target_col)
-    target_unit: str = "Value"         # 绘图单位 (可选)
+    material_system: str = ""          # Optional material-domain context for the LLM
+    target_label: str = ""             # Optional plot y-axis label; defaults to target_col
+    target_unit: str = "Value"         # Optional unit for plots
     normalize_mixed_units: bool = False
     composition_missing_policy: str = COMPLETE_COMPOSITION_POLICY
     # Measured auxiliary properties that must never be model/LLM inputs.
@@ -230,6 +232,7 @@ def _detect_columns(
         api_key=api_key,
         model=LLM_SCORING_MODEL,
         base_url=LLM_API_BASE_URL,
+        allow_inference=False,
     )
 
 
@@ -519,11 +522,12 @@ def _feature_fit_scope() -> str:
 
 def _output_namespace() -> tuple[Path, str]:
     runtime = _runtime_protocol()
+    output_root = OUTPUT_ROOT if OUTPUT_ROOT is not None else OUTPUT_DIR
     if runtime == DEFAULT_PROTOCOL:
-        return OUTPUT_DIR, "paper"
+        return output_root, "paper"
     raw = json.dumps(runtime, sort_keys=True, separators=(",", ":"))
     protocol_id = hashlib.sha1(raw.encode("utf-8")).hexdigest()[:12]
-    return OUTPUT_DIR / "_custom" / protocol_id, "custom"
+    return output_root / "_custom" / protocol_id, "custom"
 
 
 # ═══════════════════════════════════════════════════════════════════════
@@ -1219,6 +1223,96 @@ def _write_jsonl_atomic(path: Path, records: list[dict]) -> None:
     tmp.replace(path)
 
 
+def _write_json_atomic(path: Path, payload: dict) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_name(f"{path.stem}.{os.getpid()}.{time.time_ns()}.tmp")
+    with tmp.open("w", encoding="utf-8", newline="\n") as stream:
+        json.dump(payload, stream, ensure_ascii=False, indent=2, default=_json_scalar)
+        stream.write("\n")
+        stream.flush()
+        os.fsync(stream.fileno())
+    tmp.replace(path)
+
+
+def _publish_result_json(path: Path, payload: dict) -> None:
+    """Finish an interrupted publication without replacing an existing result."""
+    if path.exists():
+        existing = json.loads(path.read_text(encoding="utf-8"))
+        canonical = lambda value: json.dumps(
+            value, sort_keys=True, default=_json_scalar
+        )
+        if canonical(existing) != canonical(payload):
+            raise RuntimeError(
+                f"Refusing to replace existing result {path}; use --output-root "
+                "for an independent rerun."
+            )
+        return
+    _write_json_atomic(path, payload)
+
+
+def _prepare_output_directory(
+    out_dir: Path, run_identity: dict, resources: dict,
+) -> bool:
+    """Bind output ownership and recognize complete runs before remote work.
+
+    The caller holds _run.lock. Outputs without a matching identity are kept
+    intact: even apparently complete legacy results cannot prove this request.
+    """
+    identity_path = out_dir / "_run_identity.json"
+    refusal = (
+        f"Existing output in {out_dir} cannot be reused for this request; "
+        "all files were preserved. Use matching settings/source or "
+        "--output-root with a separate directory for an independent rerun."
+    )
+    if identity_path.exists():
+        try:
+            existing_identity = json.loads(identity_path.read_text(encoding="utf-8"))
+        except (OSError, UnicodeError, json.JSONDecodeError) as exc:
+            raise RuntimeError(refusal + " Invalid run identity.") from exc
+        if existing_identity != run_identity:
+            raise RuntimeError(refusal + " Run identity mismatch.")
+    else:
+        if any(path.name != "_run.lock" for path in out_dir.iterdir()):
+            raise RuntimeError(refusal + " Missing run identity.")
+        _write_json_atomic(identity_path, run_identity)
+
+    conv_path = out_dir / "convergence.json"
+    stats_path = out_dir / "stats.json"
+    if not conv_path.exists() and not stats_path.exists():
+        return False
+    if not conv_path.exists() or not stats_path.exists():
+        checkpoint_path = out_dir / "_checkpoint.json"
+        if not (checkpoint_path.exists() or any(
+            out_dir.glob(f"{checkpoint_path.stem}*.tmp")
+        )):
+            raise RuntimeError(refusal + " Incomplete result publication without checkpoint.")
+        return False
+    try:
+        convergence = json.loads(conv_path.read_text(encoding="utf-8"))
+        stats = json.loads(stats_path.read_text(encoding="utf-8"))
+        names = list(_active_strategy_names())
+        if (list(convergence["strategies"]) != names
+                or set(stats["strategies"]) != set(names)
+                or convergence["config"].get("run_identity_sha256") != hashlib.sha256(
+                    json.dumps(run_identity, sort_keys=True).encode("utf-8")
+                ).hexdigest()
+                or convergence["config"]["n_runs"] != N_RUNS
+                or convergence["config"]["total_budget"] != resources["total_budget"]):
+            raise ValueError("result configuration mismatch")
+        for runs in convergence["strategies"].values():
+            if not isinstance(runs, list) or len(runs) != N_RUNS:
+                raise ValueError("incomplete run count")
+            for records in runs:
+                if (not records
+                        or records[-1].get("stop_reason") != "total_budget_reached"
+                        or records[-1].get("train_size") != resources["total_budget"]):
+                    raise ValueError("incomplete fixed budget")
+    except (OSError, UnicodeError, json.JSONDecodeError, KeyError,
+            TypeError, ValueError, IndexError) as exc:
+        raise RuntimeError(refusal + f" Invalid completed results: {exc}") from exc
+    return True
+
+
 def _json_scalar(value):
     """Serialize pandas/numpy scalar values without changing numeric meaning."""
     if isinstance(value, np.generic):
@@ -1277,6 +1371,36 @@ def _static_evidence_records(
 
 
 def precompute_llm_scores(
+    df: pd.DataFrame,
+    comp_df: pd.DataFrame,
+    target_col: str,
+    element_cols: list[str],
+    process_cols: list[str],
+    material_system: str,
+    composition_unit: str,
+    objective_direction: str,
+    cache_path: Path,
+    objective_description: str = "",
+    cache_metadata: dict | None = None,
+    forbidden_target_cols: list[str] | None = None,
+    key_pool: AsyncUSTCKeyPool | None = None,
+    evidence_path: Path | None = None,
+) -> dict[str, np.ndarray]:
+    # Main comparisons and ablations share this identity. Keep the lock across
+    # the cache recheck, remote generation, and both publication operations.
+    with exclusive_file_lock(cache_path.with_name(cache_path.name + ".lock")):
+        return _precompute_llm_scores_locked(
+            df=df, comp_df=comp_df, target_col=target_col,
+            element_cols=element_cols, process_cols=process_cols,
+            material_system=material_system, composition_unit=composition_unit,
+            objective_direction=objective_direction, cache_path=cache_path,
+            objective_description=objective_description,
+            cache_metadata=cache_metadata, forbidden_target_cols=forbidden_target_cols,
+            key_pool=key_pool, evidence_path=evidence_path,
+        )
+
+
+def _precompute_llm_scores_locked(
     df: pd.DataFrame,
     comp_df: pd.DataFrame,
     target_col: str,
@@ -1459,9 +1583,7 @@ def precompute_llm_scores(
             "generation with exact candidates, scores, retrieval mode, and "
             "mode-consistent evidence"
         )
-    tmp = cache_path.with_suffix(".tmp")
-    tmp.write_text(json.dumps(cache_data, ensure_ascii=False), encoding="utf-8")
-    tmp.replace(cache_path)
+    _write_json_atomic(cache_path, cache_data)
     print(
         f"[llm] Saved scores to {cache_path.name} and traceable evidence "
         f"to {evidence_path.name}"
@@ -1487,7 +1609,8 @@ def _static_cache_path(dataset: str, metadata: dict) -> Path:
     """Share a task's blind knowledge baseline across paired comparisons."""
     raw = json.dumps(metadata, sort_keys=True, separators=(",", ":"))
     identity = hashlib.sha256(raw.encode("utf-8")).hexdigest()[:16]
-    return OUTPUT_DIR / "_static" / dataset / identity / "_llm_scores.json"
+    output_root = OUTPUT_ROOT if OUTPUT_ROOT is not None else OUTPUT_DIR
+    return output_root / "_static" / dataset / identity / "_llm_scores.json"
 
 
 def _static_knowledge_identity(scores: dict, cache_path: Path) -> dict:
@@ -1504,6 +1627,13 @@ def _static_knowledge_identity(scores: dict, cache_path: Path) -> dict:
 
 
 def run_dataset(config: DatasetConfig) -> None:
+    """Serialize all writers to one task output, including completed reruns."""
+    output_namespace, _ = _output_namespace()
+    with exclusive_file_lock(output_namespace / config.name / "_run.lock"):
+        _run_dataset_locked(config)
+
+
+def _run_dataset_locked(config: DatasetConfig) -> None:
     paired_run_seeds = paired_seeds(config.name, N_RUNS, seed=SEED)
     run_sources = (PAPER_RUNS[config.name]["source_run_numbers"][:N_RUNS]
                    if SEED is None else None)
@@ -1536,16 +1666,7 @@ def run_dataset(config: DatasetConfig) -> None:
         f"{environment_identity['sha256'][:12]}"
     )
 
-    available_keys = require_ustc_api_keys(API_KEY_SLOT)
-    api_keys = [available_keys[API_KEY_SLOT - 1]]
-    shared_key_pool = AsyncUSTCKeyPool(
-        api_keys,
-        base_url=LLM_API_BASE_URL,
-        key_aliases=[f"key_slot_{API_KEY_SLOT}"],
-        per_key_concurrency=LLM_PER_KEY_CONCURRENCY,
-    )
-
-    # 一次读取, 共享给列检测、数据加载和 LLM 评审
+    # Read once and share with column detection, data loading, and LLM review.
     df_raw = read_dataset_table(config.data_path)
 
     # Four-role classification. Registered sibling targets and explicit
@@ -1562,7 +1683,6 @@ def run_dataset(config: DatasetConfig) -> None:
         config.target_col,
         config.data_path,
         forced_property_cols,
-        api_key=api_keys[0],
     )
     elem_cols = column_roles["element_cols"]
     proc_cols = column_roles["process_cols"]
@@ -1686,7 +1806,7 @@ def run_dataset(config: DatasetConfig) -> None:
         "llm_retry_until_success": LLM_RETRY_UNTIL_SUCCESS,
         "llm_strict_scoring": LLM_STRICT_SCORING,
         "llm_max_concurrency": LLM_MAX_CONCURRENCY,
-        "llm_api_key_count": shared_key_pool.key_count,
+        "llm_api_key_count": LLM_API_KEY_COUNT,
         "llm_per_key_concurrency": LLM_PER_KEY_CONCURRENCY,
         "llm_key_scheduler": LLM_KEY_SCHEDULER_VERSION,
         "llm_key_slot_alias": f"key_slot_{API_KEY_SLOT}",
@@ -1703,7 +1823,7 @@ def run_dataset(config: DatasetConfig) -> None:
     }
     print(
         f"[setup] Strict LLM scoring: retry transient failures until success, "
-        f"keys={shared_key_pool.key_count}, "
+        f"keys={LLM_API_KEY_COUNT}, "
         f"assigned_slot={API_KEY_SLOT}, "
         f"per-key concurrency={LLM_PER_KEY_CONCURRENCY}, "
         f"total concurrency={LLM_MAX_CONCURRENCY}, no static fallback"
@@ -1747,6 +1867,45 @@ def run_dataset(config: DatasetConfig) -> None:
             composition_unit=config.composition_unit,
             objective_direction=config.objective_direction,
         )
+    )
+    run_identity = json.loads(json.dumps({
+        "version": "calm_output_identity_v1",
+        "dataset": {key: value for key, value in asdict(config).items()
+                    if key != "xlsx_path"},
+        "dataset_files": [
+            _sha256_file(config.data_path),
+            _sha256_file(config.data_path.with_suffix(".columns.json")),
+            _sha256_file(config.data_path.with_suffix(".dedup.json")),
+        ],
+        "protocol": _runtime_protocol(),
+        "paired_run_seeds": paired_run_seeds,
+        "implementation_sha256": implementation_identity["sha256"],
+        "environment_sha256": environment_identity["sha256"],
+        "llm_cache_metadata": llm_cache_metadata,
+        "api_key_slot": API_KEY_SLOT,
+    }, ensure_ascii=False, sort_keys=True, default=_json_scalar))
+    if _prepare_output_directory(out_dir, run_identity, resources):
+        # A crash after the two JSON publications may leave only the optional
+        # plot unfinished. Complete it locally without reopening the AL run.
+        if not (out_dir / "convergence_plot.png").exists():
+            completed = json.loads((out_dir / "convergence.json").read_text(encoding="utf-8"))
+            plot_convergence(
+                completed["strategies"], global_max, completed["config"],
+                out_dir / "convergence_plot.png",
+                target_label=config.target_label, target_unit=config.target_unit,
+            )
+        print(f"[done] {config.name} is already complete; preserved {out_dir}")
+        return
+
+    # Registered local inputs and existing outputs are checked before loading
+    # credentials, constructing reviewers, or making a scoring request.
+    available_keys = require_ustc_api_keys(API_KEY_SLOT)
+    api_keys = [available_keys[API_KEY_SLOT - 1]]
+    shared_key_pool = AsyncUSTCKeyPool(
+        api_keys,
+        base_url=LLM_API_BASE_URL,
+        key_aliases=[f"key_slot_{API_KEY_SLOT}"],
+        per_key_concurrency=LLM_PER_KEY_CONCURRENCY,
     )
     llm_scores = precompute_llm_scores(
         df=review_df,
@@ -1821,6 +1980,9 @@ def run_dataset(config: DatasetConfig) -> None:
             anchor_nearby_k=ANCHOR_NEARBY_K,
             candidate_memory_prefilter_k=CANDIDATE_MEMORY_PREFILTER_K,
             audit_path=out_dir / DYNAMIC_EVIDENCE_FILENAMES[strategy_name],
+            audit_identity={"run_identity_sha256": hashlib.sha256(
+                json.dumps(run_identity, sort_keys=True).encode("utf-8")
+            ).hexdigest()},
         )
         for strategy_name in _active_dynamic_names()
     }
@@ -2133,6 +2295,9 @@ def run_dataset(config: DatasetConfig) -> None:
     # ── 6) Save results ──
     conv_output = {
         "config": {
+            "run_identity_sha256": hashlib.sha256(
+                json.dumps(run_identity, sort_keys=True).encode("utf-8")
+            ).hexdigest(),
             "experiment_version": EXPERIMENT_VERSION,
             "run_mode": run_mode,
             "dataset": config.name,
@@ -2257,7 +2422,7 @@ def run_dataset(config: DatasetConfig) -> None:
         conv_output["strategies"][name] = runs
 
     conv_path = out_dir / "convergence.json"
-    conv_path.write_text(json.dumps(conv_output, ensure_ascii=False, indent=2), encoding="utf-8")
+    _publish_result_json(conv_path, conv_output)
     print(f"[save] {conv_path}")
 
     stats = compute_stats(
@@ -2272,12 +2437,13 @@ def run_dataset(config: DatasetConfig) -> None:
         reference_strategy="CALM",
     )
     stats_path = out_dir / "stats.json"
-    stats_path.write_text(json.dumps(stats, ensure_ascii=False, indent=2), encoding="utf-8")
+    _publish_result_json(stats_path, stats)
     print(f"[save] {stats_path}")
 
-    plot_convergence(all_records, global_max, conv_output["config"],
-                     out_dir / "convergence_plot.png",
-                     target_label=config.target_label, target_unit=config.target_unit)
+    if not (out_dir / "convergence_plot.png").exists():
+        plot_convergence(all_records, global_max, conv_output["config"],
+                         out_dir / "convergence_plot.png",
+                         target_label=config.target_label, target_unit=config.target_unit)
     print(f"[save] {out_dir / 'convergence_plot.png'}")
 
     removed_checkpoint = False
@@ -2319,6 +2485,8 @@ def parse_args() -> argparse.Namespace:
         description="CALM: the nine-task, single-objective paper benchmark"
     )
     p.add_argument("--dataset", choices=list(DATASETS), default="2xxx_T6__UTS")
+    p.add_argument("--output-root", type=Path, default=None,
+                   help="Separate output and static-cache root for an independent rerun.")
     p.add_argument("--n-runs", type=int, default=10)
     p.add_argument("--initial-fraction", type=float, default=INITIAL_LABELED_FRACTION)
     p.add_argument("--batch-fraction", type=float, default=BATCH_QUERY_FRACTION)
@@ -2337,7 +2505,7 @@ def parse_args() -> argparse.Namespace:
 def main():
     global N_RUNS, INITIAL_LABELED_FRACTION, BATCH_QUERY_FRACTION
     global TOTAL_LABELED_BUDGET_FRACTION, SEED, RESCORING_INTERVAL, EWRC_GAMMA
-    global API_KEY_SLOT, EXPERIMENT_MODE, FIXED_LAMBDA
+    global API_KEY_SLOT, EXPERIMENT_MODE, FIXED_LAMBDA, OUTPUT_ROOT
     args = parse_args()
     if (args.n_runs < 1
             or not 0 < args.initial_fraction < args.total_budget_fraction <= 1
@@ -2350,6 +2518,7 @@ def main():
     TOTAL_LABELED_BUDGET_FRACTION = args.total_budget_fraction
     SEED = args.seed
     API_KEY_SLOT = args.api_key_slot
+    OUTPUT_ROOT = args.output_root.resolve() if args.output_root is not None else None
     EXPERIMENT_MODE = args.experiment
     RESCORING_INTERVAL = 0 if args.experiment in {"no-fsr", "no-fsr-no-ewrc"} else 1
     EWRC_GAMMA = 0.0 if args.experiment == "spearman" else 2.0

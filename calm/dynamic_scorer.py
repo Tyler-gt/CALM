@@ -66,6 +66,7 @@ class DynamicLLMScorer:
         anchor_nearby_k: int = 3,
         candidate_memory_prefilter_k: int = CANDIDATE_MEMORY_PREFILTER_K,
         audit_path: Path | None = None,
+        audit_identity: dict | None = None,
     ):
         self.reviewer = reviewer
         self.llm_identity = {
@@ -113,9 +114,35 @@ class DynamicLLMScorer:
             1, int(candidate_memory_prefilter_k)
         )
         self.audit_path = Path(audit_path) if audit_path is not None else None
+        # Bind recovery to the exact data/configuration and selection prompt
+        # implementation. Only inputs and hashes are stored; no target values
+        # are exposed during target-blind selection.
+        reviewer_source = Path(__file__).resolve().parent.parent / "common/llm/reviewer.py"
+        self._memory_scope_sha256 = self._manifest_sha256({
+            "audit_identity": audit_identity or {},
+            "llm_identity": self.llm_identity,
+            "temperature": getattr(reviewer, "temperature", None),
+            "selection_implementation_sha256": hashlib.sha256(
+                reviewer_source.read_bytes()
+            ).hexdigest(),
+            "target_col": self.target_col,
+            "reviewer_target_col": getattr(reviewer, "target_col", self.target_col),
+            "reviewer_objective_direction": getattr(
+                reviewer, "objective_direction", self.objective_direction
+            ),
+            "reviewer_element_cols": getattr(reviewer, "element_cols", self.element_cols),
+            "reviewer_process_cols": getattr(reviewer, "process_cols", self.process_cols),
+            "composition_unit": self.composition_unit,
+            "objective_direction": self.objective_direction,
+            "input_columns": self.input_cols,
+            "candidate_inputs": _input_records(self.comp_df, self.input_cols),
+            "prefilter_k": self.candidate_memory_prefilter_k,
+            "candidate_memory_policy": CANDIDATE_MEMORY_POLICY_VERSION,
+        })
         self._run_index: int | None = None
         self._strategy_name = "CALM"
         self._seen_audit_ids: set[str] = set()
+        self._memory_selection_records: dict[tuple, list[dict]] = {}
         self._source_evidence_ids: dict[tuple[str, int], str] = {}
         self._last_anchor_manifest: list[dict] = []
         self._last_anchor_manifest_sha256 = ""
@@ -132,17 +159,22 @@ class DynamicLLMScorer:
         valid_records: list[dict] = []
         needs_repair = False
         try:
-            raw_text = self.audit_path.read_text(encoding="utf-8")
-            needs_repair = bool(raw_text and not raw_text.endswith("\n"))
-            for line in raw_text.splitlines():
-                if not line.strip():
+            raw_bytes = self.audit_path.read_bytes()
+            needs_repair = bool(raw_bytes and not raw_bytes.endswith(b"\n"))
+            for raw_line in raw_bytes.splitlines():
+                if not raw_line.strip():
                     continue
                 try:
+                    # A killed write may stop inside the last UTF-8 character.
+                    # Decode each line so that earlier fsynced records survive.
+                    line = raw_line.decode("utf-8")
                     record = json.loads(line)
-                except json.JSONDecodeError:
+                except (UnicodeDecodeError, json.JSONDecodeError):
                     needs_repair = True
                     continue
                 valid_records.append(record)
+                if record.get("phase") == "candidate_memory_select":
+                    self._index_memory_selection(record)
                 event_id = record.get("evidence_id")
                 if event_id:
                     self._seen_audit_ids.add(str(event_id))
@@ -155,7 +187,7 @@ class DynamicLLMScorer:
                         except (KeyError, TypeError, ValueError):
                             continue
                         self._source_evidence_ids[source_key] = str(event_id)
-        except (OSError, UnicodeDecodeError):
+        except OSError:
             return
         if needs_repair:
             tmp = self.audit_path.with_suffix(".repair.tmp")
@@ -190,6 +222,9 @@ class DynamicLLMScorer:
         return {
             **self.llm_identity,
             "candidate_memory_policy": CANDIDATE_MEMORY_POLICY_VERSION,
+            "memory_scope_sha256": self._memory_scope_sha256,
+            "run_index": self._run_index,
+            "strategy": self._strategy_name,
             "candidate_memories": [
                 dict(self._candidate_memory[index])
                 for index in sorted(self._candidate_memory)
@@ -205,6 +240,10 @@ class DynamicLLMScorer:
             raise ValueError("Candidate-memory LLM endpoint/model mismatch")
         if state.get("candidate_memory_policy") != CANDIDATE_MEMORY_POLICY_VERSION:
             raise ValueError("Candidate-memory checkpoint policy mismatch")
+        if (state.get("memory_scope_sha256") != self._memory_scope_sha256
+                or state.get("run_index") != self._run_index
+                or state.get("strategy") != self._strategy_name):
+            raise ValueError("Candidate-memory checkpoint run/configuration mismatch")
         restored: dict[int, dict] = {}
         for raw in state.get("candidate_memories", []):
             memory = dict(raw)
@@ -520,6 +559,10 @@ class DynamicLLMScorer:
             "phase": "candidate_memory_select",
             "dynamic_feedback_policy": DYNAMIC_FEEDBACK_POLICY_VERSION,
             "candidate_memory_policy": CANDIDATE_MEMORY_POLICY_VERSION,
+            "memory_scope_sha256": self._memory_scope_sha256,
+            "selection_request_sha256": self._memory_selection_request_sha256(
+                candidate_index, options
+            ),
             "composition_unit": self.composition_unit,
             "objective_direction": self.objective_direction,
             "run_index": self._run_index,
@@ -544,9 +587,81 @@ class DynamicLLMScorer:
         event_id = hashlib.sha1(raw.encode("utf-8")).hexdigest()
         if event_id not in self._seen_audit_ids:
             trace["evidence_id"] = event_id
-            self._seen_audit_ids.add(event_id)
             self._write_audit_records([trace])
+            self._seen_audit_ids.add(event_id)
+            self._index_memory_selection(trace)
         return event_id
+
+    def _memory_selection_request_sha256(
+        self, candidate_index: int, options: list[dict],
+    ) -> str:
+        return self._manifest_sha256({
+            "memory_scope_sha256": self._memory_scope_sha256,
+            "candidate_input": self._candidate_input(candidate_index),
+            "anchor_options": options,
+        })
+
+    def _index_memory_selection(self, record: dict) -> None:
+        if record.get("memory_scope_sha256") != self._memory_scope_sha256:
+            return
+        try:
+            key = (record["run_index"], str(record["strategy"]),
+                   int(record["candidate_index"]), int(record["iteration"]))
+        except (KeyError, TypeError, ValueError) as exc:
+            raise ValueError("Malformed durable candidate-memory selection") from exc
+        self._memory_selection_records.setdefault(key, []).append(record)
+
+    @staticmethod
+    def _memory_from_selection(record: dict) -> dict:
+        selected = next(option for option in record["anchor_options"]
+                        if str(option["option_id"]) == record["selected_option_id"])
+        return {
+            "candidate_index": int(record["candidate_index"]),
+            "anchor_candidate_index": int(selected["candidate_index"]),
+            "distance_to_candidate": float(selected["distance_to_candidate"]),
+            "created_iteration": int(record["iteration"]),
+            "revision": 0,
+            "selection_reason": str(record["selection_reason"]),
+            "selection_key_alias": str(record["key_alias"]),
+            "selection_evidence_id": str(record["evidence_id"]),
+        }
+
+    def _recover_candidate_memory(
+        self, candidate_index: int, options: list[dict], iteration: int,
+    ) -> dict | None:
+        key = (self._run_index, self._strategy_name, candidate_index, iteration)
+        records = self._memory_selection_records.get(key, [])
+        recovered = None
+        for record in records:
+            trace = dict(record)
+            event_id = trace.pop("evidence_id", None)
+            raw = json.dumps(trace, ensure_ascii=False, sort_keys=True,
+                             default=_json_scalar)
+            matches = [option for option in options
+                       if str(option["option_id"]) == record.get("selected_option_id")]
+            if (event_id != hashlib.sha1(raw.encode("utf-8")).hexdigest()
+                    or record.get("selection_request_sha256")
+                    != self._memory_selection_request_sha256(candidate_index, options)
+                    or record.get("candidate_input") != self._candidate_input(candidate_index)
+                    or record.get("anchor_options") != options
+                    or record.get("target_values_hidden") is not True
+                    or len(matches) != 1
+                    or record.get("selected_anchor_candidate_index")
+                    != matches[0]["candidate_index"]
+                    or not str(record.get("selection_reason", "")).strip()
+                    or record.get("candidate_memory_policy") != CANDIDATE_MEMORY_POLICY_VERSION
+                    or record.get("evidence_version") != LLM_EVIDENCE_VERSION
+                    or any(record.get(name) != value
+                           for name, value in self.llm_identity.items())):
+                raise ValueError(
+                    f"Invalid durable M1 selection for candidate {candidate_index}; "
+                    "refusing to reselect after an interrupted iteration"
+                )
+            memory = self._memory_from_selection(record)
+            if recovered is not None and recovered != memory:
+                raise ValueError("Conflicting durable M1 selections for one candidate")
+            recovered = memory
+        return recovered
 
     def prepare_candidate_memories(
         self,
@@ -584,10 +699,19 @@ class DynamicLLMScorer:
                 "Reviewer does not implement target-blind candidate-memory selection"
             )
 
-        option_sets = [
-            self._candidate_memory_options(candidate_index, train)
-            for candidate_index in missing
-        ]
+        pending: list[int] = []
+        option_sets: list[list[dict]] = []
+        for candidate_index in missing:
+            options = self._candidate_memory_options(candidate_index, train)
+            memory = self._recover_candidate_memory(candidate_index, options, int(iteration))
+            if memory is not None:
+                self._candidate_memory[candidate_index] = memory
+            else:
+                pending.append(candidate_index)
+                option_sets.append(options)
+        missing = pending
+        if not missing:
+            return
         requests = [
             {
                 "candidate_input": self._candidate_input(candidate_index),

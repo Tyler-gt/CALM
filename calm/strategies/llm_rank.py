@@ -9,7 +9,7 @@ from .base import AcquisitionStrategy
 
 
 class LLMRank(AcquisitionStrategy):
-    """按 LLM 评分加性排序, 不依赖任何代理模型."""
+    """Rank candidates by descending LLM score without a surrogate model."""
 
     name = "LLM-rank"
     needs_retrain = False

@@ -83,8 +83,8 @@ def plot_convergence(
         else global_min
     )
     target_range = float(global_max) - global_min
-    if target_range <= 0:
-        raise ValueError("Global target range must be positive for plotting")
+    if not np.isfinite(target_range) or target_range < 0:
+        raise ValueError("Global target range must be finite and non-negative")
 
     queried_percent = (
         np.asarray([record["train_size"] for record in sample_run], dtype=float)
@@ -126,32 +126,33 @@ def plot_convergence(
             alpha=0.12,
         )
 
-        normalized_regret = objective_regret(
-            values,
-            global_min=global_min,
-            global_max=global_max,
-            direction=objective_direction,
-        ) / target_range
-        regret_mean = np.mean(normalized_regret, axis=0)
-        regret_std = np.std(normalized_regret, axis=0, ddof=ddof)
-        ax2.plot(
-            queried_percent,
-            regret_mean,
-            color=color,
-            ls=line_style,
-            marker=marker,
-            markevery=marker_every,
-            markersize=5,
-            label=name,
-            linewidth=1.8,
-        )
-        ax2.fill_between(
-            queried_percent,
-            np.maximum(regret_mean - regret_std, 0.0),
-            regret_mean + regret_std,
-            color=color,
-            alpha=0.12,
-        )
+        if target_range > 0:
+            normalized_regret = objective_regret(
+                values,
+                global_min=global_min,
+                global_max=global_max,
+                direction=objective_direction,
+            ) / target_range
+            regret_mean = np.mean(normalized_regret, axis=0)
+            regret_std = np.std(normalized_regret, axis=0, ddof=ddof)
+            ax2.plot(
+                queried_percent,
+                regret_mean,
+                color=color,
+                ls=line_style,
+                marker=marker,
+                markevery=marker_every,
+                markersize=5,
+                label=name,
+                linewidth=1.8,
+            )
+            ax2.fill_between(
+                queried_percent,
+                np.maximum(regret_mean - regret_std, 0.0),
+                regret_mean + regret_std,
+                color=color,
+                alpha=0.12,
+            )
         hit_rates.append(float(np.mean([
             bool(run[-1].get("global_optimum_found", False)) for run in runs
         ])))
@@ -166,8 +167,19 @@ def plot_convergence(
     ):
         axis.set_xlabel("Labeled candidate-pool fraction (%)")
         axis.set_ylabel(ylabel)
-        axis.legend(fontsize=8)
+        if axis.get_legend_handles_labels()[0]:
+            axis.legend(fontsize=8)
         axis.grid(True, alpha=0.3)
+
+    if target_range == 0:
+        ax2.text(
+            0.5,
+            0.5,
+            "Normalized regret is undefined\n(constant target values)",
+            transform=ax2.transAxes,
+            ha="center",
+            va="center",
+        )
 
     dataset_name = config.get("dataset", config.get("dataset_name", "CALM"))
     ax1.axhline(global_optimum, color="#333333", ls=":", lw=1.2)

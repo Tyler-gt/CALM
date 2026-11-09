@@ -10,25 +10,17 @@ import asyncio
 import json
 import math
 import random
-import time
 
 import pandas as pd
-from openai import (
-    AuthenticationError,
-    BadRequestError,
-    NotFoundError,
-    OpenAI,
-    PermissionDeniedError,
-    UnprocessableEntityError,
-)
+from openai import APIStatusError
 
 from common.llm.prompts import (
     build_dataset_profile,
     build_history_stats,
     get_messages,
 )
-from common.llm.response_utils import extract_message_text
-from common.llm.config import get_api_base_url, get_llm_model, validate_api_base_url
+from common.llm.response_utils import extract_message_text, parse_json_object
+from common.llm.config import get_llm_model
 from common.llm.key_pool import (
     AsyncUSTCKeyPool,
     NoAvailableAPIKeyError,
@@ -66,19 +58,54 @@ def _validate_composition_unit(composition_unit: str) -> str:
     return unit
 
 
-_PERMANENT_LLM_ERRORS = (
-    AuthenticationError,
-    PermissionDeniedError,
-    BadRequestError,
-    NotFoundError,
-    UnprocessableEntityError,
-    NoAvailableAPIKeyError,
-)
-
-
 def _is_permanent_llm_error(exc: Exception) -> bool:
     """Errors that cannot become successful without changing configuration."""
-    return isinstance(exc, _PERMANENT_LLM_ERRORS)
+    return isinstance(exc, NoAvailableAPIKeyError) or (
+        isinstance(exc, APIStatusError)
+        and not AsyncUSTCKeyPool.is_retryable_status_error(exc)
+    )
+
+
+async def _gather_batch(coroutines) -> list[dict]:
+    """Finish every task before a failed/cancelled batch releases its session."""
+    tasks = [asyncio.create_task(coroutine) for coroutine in coroutines]
+    try:
+        return await asyncio.gather(*tasks)
+    except BaseException:
+        for task in tasks:
+            if not task.done():
+                task.cancel()
+        await asyncio.gather(*tasks, return_exceptions=True)
+        raise
+
+
+def _validate_scoring_response(result: dict) -> None:
+    """Validate the fields requested by the paper's scoring prompt."""
+    reason = result.get("reason")
+    if not isinstance(reason, str) or not reason.strip():
+        raise ValueError("LLM scoring response requires a non-empty string reason")
+    for field in ("principles", "off_target_notes"):
+        if field in result and (
+            not isinstance(result[field], list)
+            or any(not isinstance(item, str) or not item.strip() for item in result[field])
+        ):
+            raise ValueError(f"LLM scoring response {field} must be a list of strings")
+    if "target_mechanism" in result and (
+        not isinstance(result["target_mechanism"], str)
+        or not result["target_mechanism"].strip()
+    ):
+        raise ValueError("LLM scoring response target_mechanism must be a non-empty string")
+    for field in ("s_target_raw", "s_phys_raw", "s_general_plausibility_raw"):
+        if field in result and (
+            type(result[field]) is not int or not 0 <= result[field] <= 100
+        ):
+            raise ValueError(f"LLM scoring response {field} must be an integer in [0, 100]")
+    if "s_phys" in result and (
+        type(result["s_phys"]) not in (int, float)
+        or not 0 <= result["s_phys"] <= 1
+        or not math.isfinite(result["s_phys"])
+    ):
+        raise ValueError("LLM scoring response s_phys must be a finite number in [0, 1]")
 
 # ═══════════════════════════════════════════════════════════════════
 # Column and input helpers
@@ -88,31 +115,6 @@ def _is_permanent_llm_error(exc: Exception) -> bool:
 # ═══════════════════════════════════════════════════════════════════
 # Helpers
 # ═══════════════════════════════════════════════════════════════════
-
-_COLUMN_ROLE_PROMPT = """\
-You are classifying columns in an alloy dataset for a general active-learning
-pipeline. Use semantic judgment from the column names and sample values; do not
-apply a hard-coded keyword list or alloy-system-specific assumptions.
-
-Classify every input column into exactly one of:
-- element_cols: direct alloy composition amount columns for chemical elements.
-- process_cols: processing, heat treatment, deformation, test condition, or
-  other experimental/input variables that should be usable by the model.
-- target_cols: measured objective/property columns. The intended target column
-  is "{target_col}", but classify any other property columns as target_cols too.
-- metadata_cols: identifiers, references, comments, alloy names, free-text
-  formula/composition descriptions, derived audit fields, or columns that should
-  not be used as model inputs.
-
-Return only a JSON object with keys:
-"element_cols", "process_cols", "target_cols", "metadata_cols".
-Each value must be a list of exact column names copied from the input.
-Every input column must appear exactly once across the four lists.
-
-Column records:
-{column_records}
-"""
-
 
 def _jsonable_sample(value):
     if pd.isna(value):
@@ -125,125 +127,15 @@ def _jsonable_sample(value):
     return value
 
 
-def _column_records(
-    df: pd.DataFrame,
-    target_col: str = "",
-    max_values: int = 5,
-) -> str:
-    records = []
-    for col in df.columns:
-        if target_col and str(col) == str(target_col):
-            values = ["<known target column values hidden>"]
-        else:
-            values = [_jsonable_sample(v) for v in df[col].dropna().head(max_values)]
-        records.append({"name": str(col), "sample_values": values})
-    return json.dumps(records, ensure_ascii=False, default=str, indent=2)
-
-
-def _dedupe_known_columns(values, columns: list[str]) -> list[str]:
-    known = set(columns)
-    out = []
-    seen = set()
-    for value in values or []:
-        col = str(value)
-        if col in known and col not in seen:
-            out.append(col)
-            seen.add(col)
-    return out
-
-
-def _classify_columns_with_llm(
-    df: pd.DataFrame,
-    target_col: str,
-    *,
-    model: str,
-    base_url: str | None = None,
-) -> dict[str, list[str]]:
-    """Classify all columns with the LLM; no regex/keyword role detection."""
-    columns = [str(c) for c in df.columns]
-    prompt = _COLUMN_ROLE_PROMPT.format(
-        target_col=target_col or "",
-        column_records=_column_records(df, target_col=target_col),
-    )
-
-    client = OpenAI(
-        api_key=require_ustc_api_keys(1)[0],
-        base_url=validate_api_base_url(
-            get_api_base_url() if base_url is None else base_url
-        ),
-    )
-
-    last_err: Exception | None = None
-    result = None
-    for attempt in range(3):
-        try:
-            resp = client.chat.completions.create(
-                model=model,
-                messages=[{"role": "user", "content": prompt}],
-                temperature=0.0,
-                response_format={"type": "json_object"},
-                timeout=30,
-            )
-            raw = extract_message_text(resp.choices[0].message)
-            if not raw:
-                raise ValueError("empty LLM response")
-            result = json.loads(raw)
-            break
-        except Exception as exc:
-            last_err = exc
-            if attempt < 2:
-                delay = 2 ** attempt
-                print(f"[LLMReviewer] Column classification retry {attempt + 1}/3 in {delay}s: {exc}")
-                time.sleep(delay)
-            else:
-                raise RuntimeError(
-                    f"LLM column classification failed after 3 attempts: {last_err}"
-                ) from last_err
-
-    roles = {
-        "element_cols": _dedupe_known_columns(result.get("element_cols", []), columns),
-        "process_cols": _dedupe_known_columns(result.get("process_cols", []), columns),
-        "target_cols": _dedupe_known_columns(result.get("target_cols", []), columns),
-        "metadata_cols": _dedupe_known_columns(result.get("metadata_cols", []), columns),
-    }
-
-    assigned = set()
-    clean_roles = {key: [] for key in roles}
-    for key in ("element_cols", "process_cols", "target_cols", "metadata_cols"):
-        for col in roles[key]:
-            if col not in assigned:
-                clean_roles[key].append(col)
-                assigned.add(col)
-
-    missing = [col for col in columns if col not in assigned]
-    if missing:
-        clean_roles["metadata_cols"].extend(missing)
-
-    if target_col and target_col in columns:
-        for key in ("element_cols", "process_cols", "metadata_cols"):
-            clean_roles[key] = [c for c in clean_roles[key] if c != target_col]
-        if target_col not in clean_roles["target_cols"]:
-            clean_roles["target_cols"].insert(0, target_col)
-
-    print(
-        "[LLMReviewer] LLM column roles: "
-        f"{len(clean_roles['element_cols'])} elements, "
-        f"{len(clean_roles['process_cols'])} process, "
-        f"{len(clean_roles['target_cols'])} targets, "
-        f"{len(clean_roles['metadata_cols'])} metadata"
-    )
-    return clean_roles
-
-
 # ═══════════════════════════════════════════════════════════════════
 # Reviewer
 # ═══════════════════════════════════════════════════════════════════
 
 class LLMReviewer:
-    """多体系合金 LLM 评审器.
+    """LLM reviewer for multiple alloy systems.
 
-    每次切换数据集时调用 set_dataset() 更新 profile/统计;
-    然后 review_one() 或 review_batch() 对候选合金打分.
+    Call set_dataset() when switching datasets to update profiles and statistics;
+    then call review_one() or review_batch() to score candidate alloys.
     """
 
     def __init__(
@@ -313,13 +205,13 @@ class LLMReviewer:
                 per_key_concurrency=per_key_concurrency,
             )
         self.base_url = self.key_pool.base_url
-        # 预计算的 profile 文本
+        # Precomputed profile text
         self._element_profile: str = ""
         self._process_profile: str = ""
         self._history_stats: str = ""
         self._target_info: str = ""
 
-        # 列定义
+        # Column definitions
         self.element_cols: list[str] = element_cols or []
         self.process_cols: list[str] = process_cols or []
         self.target_cols: list[str] = [target_col] if target_col else []
@@ -327,7 +219,7 @@ class LLMReviewer:
         self._explicit_element_cols = element_cols is not None
         self._explicit_process_cols = process_cols is not None
 
-    # ── 数据集注册 ──────────────────────────────────────────────────
+    # ── Dataset registration ──────────────────────────────────────────────────
 
     def set_dataset(
         self,
@@ -338,9 +230,12 @@ class LLMReviewer:
         process_cols: list[str] | None = None,
         composition_unit: str | None = None,
     ) -> None:
-        """注册当前数据集, 自动提取 profile 和统计.
+        """Register the current dataset and automatically build profiles and statistics.
 
-        调用此方法后, review_one() 的 user message 将自动使用该数据集的信息.
+        Subsequent review_one() user messages automatically use this dataset context.
+        Supply audited element_cols and process_cols here or in the constructor;
+        an empty process_cols list is valid. Registration never infers roles or
+        makes an API request.
         """
         self.target_col = target_col or self.target_col
         if composition_unit is not None:
@@ -348,7 +243,7 @@ class LLMReviewer:
         elif not hasattr(self, "composition_unit"):
             self.composition_unit = "wt.%"
 
-        # 自动列分类: 未显式传入时, 将全部列名和样本值交给 LLM 判断.
+        # Column roles come from the caller's audited dataset registration.
         if element_cols is not None:
             self.element_cols = element_cols
             self._explicit_element_cols = True
@@ -356,27 +251,15 @@ class LLMReviewer:
             self.process_cols = process_cols
             self._explicit_process_cols = True
 
-        need_llm_roles = (
-            (element_cols is None and not self._explicit_element_cols)
-            or (process_cols is None and not self._explicit_process_cols)
-        )
-        if need_llm_roles:
-            roles = _classify_columns_with_llm(
-                df,
-                self.target_col,
-                model=self.model,
-                base_url=self.base_url,
+        if not self._explicit_element_cols or not self._explicit_process_cols:
+            raise ValueError(
+                "LLMReviewer.set_dataset requires explicit element_cols and "
+                "process_cols from the constructor or set_dataset; use "
+                "process_cols=[] when the dataset has no process inputs"
             )
-            if element_cols is None and not self._explicit_element_cols:
-                self.element_cols = roles["element_cols"]
-            if process_cols is None and not self._explicit_process_cols:
-                self.process_cols = roles["process_cols"]
-            self.target_cols = roles["target_cols"]
-            self.metadata_cols = roles["metadata_cols"]
-        else:
-            self.target_cols = [self.target_col] if self.target_col else []
+        self.target_cols = [self.target_col] if self.target_col else []
 
-        # 预构建文本
+        # Prebuild context text
         self._element_profile = build_dataset_profile(
             df,
             self.element_cols,
@@ -388,7 +271,7 @@ class LLMReviewer:
             df, self.element_cols, self.target_col
         )
 
-        # 目标信息只暴露列名, 不暴露全数据目标值分布.
+        # Expose target metadata without the full-dataset target-value distribution.
         if self.target_col:
             # Production construction always supplies the registered direction.
             # A few focused diagnostics use ``object.__new__``, so retain a
@@ -445,7 +328,7 @@ class LLMReviewer:
         return {col: _jsonable_sample(candidate.get(col)) for col in allowed}
 
 
-    # ── 单条评审 ────────────────────────────────────────────────────
+    # ── Single-candidate review ────────────────────────────────────────────────────
 
     async def review_one(self, candidate: dict, progress_report: str = "") -> dict:
         """Score one candidate inside a loop-local pooled-client session."""
@@ -459,12 +342,12 @@ class LLMReviewer:
             await self.key_pool.close_session()
 
     async def _review_one_impl(self, candidate: dict, progress_report: str = "") -> dict:
-        """对一条候选合金打分.
+        """Score one candidate alloy.
 
         Parameters
         ----------
-        candidate : 候选成分字典
-        progress_report : 实验进展报告 (可选)
+        candidate : Dictionary of candidate composition and other input values
+        progress_report : Optional experiment progress report
 
         Returns
         -------
@@ -491,7 +374,7 @@ class LLMReviewer:
             progress_report=progress_report,
         )
 
-        # ③ LLM 调用
+        # Call the LLM.
         resp, key_alias = await self.key_pool.create_chat_completion(
             model=self.model,
             messages=messages,
@@ -503,7 +386,7 @@ class LLMReviewer:
         if not raw:
             raise ValueError("empty LLM response")
 
-        # ④ 解析
+        # Parse the response.
         fallback = {
             "principles": [],
             "s_target_raw": 0,
@@ -514,18 +397,14 @@ class LLMReviewer:
             "reason": "parse error",
         }
         try:
-            result = json.loads(raw)
-        except json.JSONDecodeError:
-            try:
-                decoder = json.JSONDecoder()
-                result, _ = decoder.raw_decode(raw)
-            except json.JSONDecodeError:
-                if self.strict_scoring:
-                    raise ValueError("LLM scoring response is not valid JSON")
-                result = fallback
+            result = parse_json_object(raw)
+        except ValueError as exc:
+            if self.strict_scoring:
+                raise ValueError("LLM scoring response must be one valid JSON object") from exc
+            result = fallback.copy()
 
-        if not isinstance(result, dict):
-            raise ValueError("LLM scoring response must be a JSON object")
+        if self.strict_scoring:
+            _validate_scoring_response(result)
 
         result.setdefault("principles", [])
         has_target_score = "s_target_raw" in result
@@ -550,8 +429,6 @@ class LLMReviewer:
                 raw_float = float(raw_score)
                 if not math.isfinite(raw_float):
                     raise ValueError("raw score is not finite")
-                if 0.0 <= raw_float <= 1.0:
-                    raw_float *= 100.0
                 if self.strict_scoring and not 0.0 <= raw_float <= 100.0:
                     raise ValueError("raw score is outside [0, 100]")
                 raw_float = min(max(raw_float, 0.0), 100.0)
@@ -588,8 +465,8 @@ class LLMReviewer:
 
         try:
             plaus = float(result["s_general_plausibility_raw"])
-            if 0.0 <= plaus <= 1.0:
-                plaus *= 100.0
+            if not math.isfinite(plaus):
+                raise ValueError("plausibility score is not finite")
             result["s_general_plausibility_raw"] = int(round(min(max(plaus, 0.0), 100.0)))
         except (ValueError, TypeError):
             result["s_general_plausibility_raw"] = result["s_target_raw"]
@@ -659,21 +536,20 @@ class LLMReviewer:
         if not raw:
             raise ValueError("empty candidate-memory selection response")
         try:
-            result = json.loads(raw)
-        except json.JSONDecodeError as exc:
+            result = parse_json_object(raw)
+        except ValueError as exc:
             raise ValueError(
                 "candidate-memory selection response is not valid JSON"
             ) from exc
-        if not isinstance(result, dict):
-            raise ValueError("candidate-memory selection must be a JSON object")
-        selected = str(result.get("selected_option_id", ""))
-        if selected not in option_ids:
+        selected = result.get("selected_option_id")
+        if not isinstance(selected, str) or selected not in option_ids:
             raise ValueError(
                 "candidate-memory selection returned an unknown option ID"
             )
-        reason = str(result.get("reason", "")).strip()
-        if not reason:
-            raise ValueError("candidate-memory selection requires a reason")
+        reason = result.get("reason")
+        if not isinstance(reason, str) or not reason.strip():
+            raise ValueError("candidate-memory selection requires a non-empty string reason")
+        reason = reason.strip()
         return {
             "selected_option_id": selected,
             "reason": reason,
@@ -741,7 +617,7 @@ class LLMReviewer:
             batch_size = self.rate_limit_batch_size
             for start in range(0, total, batch_size):
                 batch = requests[start:start + batch_size]
-                results.extend(await asyncio.gather(*(_one(item) for item in batch)))
+                results.extend(await _gather_batch(_one(item) for item in batch))
                 if start + batch_size < total and self.rate_limit_sleep_seconds > 0:
                     print(
                         f"[MemoryRateLimit] batch {start // batch_size + 1} done; "
@@ -754,7 +630,7 @@ class LLMReviewer:
         finally:
             await self.key_pool.close_session()
 
-    # ── 批量评审 ────────────────────────────────────────────────────
+    # ── Batch review ────────────────────────────────────────────────────
 
     async def review_batch(
         self,
@@ -833,10 +709,10 @@ class LLMReviewer:
             for start in range(0, total, batch_size):
                 batch = candidates[start:start + batch_size]
                 batch_reports = progress_reports[start:start + batch_size]
-                results.extend(await asyncio.gather(*(
+                results.extend(await _gather_batch(
                     _one(candidate, report)
                     for candidate, report in zip(batch, batch_reports)
-                )))
+                ))
 
                 if start + batch_size < total and self.rate_limit_sleep_seconds > 0:
                     print(

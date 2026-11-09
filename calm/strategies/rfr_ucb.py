@@ -10,7 +10,7 @@ from .base import AcquisitionStrategy
 
 
 class RFRUCB(AcquisitionStrategy):
-    """Random Forest Regression with UCB. σ 来自 200 棵树的预测标准差."""
+    """Random forest UCB with sigma from tree-prediction standard deviation (200 trees by default)."""
 
     name = "RFR-UCB"
 

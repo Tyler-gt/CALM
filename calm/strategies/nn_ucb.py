@@ -13,9 +13,9 @@ from .calm import CALMAcquisition
 
 
 class NNUCB(CALMAcquisition):
-    """MC Dropout MLP-UCB — 纯数据驱动, 无 LLM 知识门控.
+    """Data-only MC Dropout MLP-UCB without LLM knowledge gating.
 
-    覆盖 fit() 强制锁定 NN 代理模型, 覆盖 select_next() 跳过 LLM 评分.
+    Override fit() to use only the NN surrogate and select_next() to omit LLM scores.
     """
 
     name = "NN-UCB"

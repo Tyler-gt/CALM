@@ -1,7 +1,8 @@
-"""小样本安全的确定性特征筛选。
+"""Deterministic feature screening designed for small samples.
 
-正式路径仅使用可观测协变量删除常量和高度冗余列，不使用目标值。
-通过 ``select_features()`` 以编程方式调用。
+The publication path uses only observable covariates to remove constant and highly
+redundant columns, without using target values.
+Call ``select_features()`` programmatically.
 """
 
 from __future__ import annotations
@@ -33,7 +34,7 @@ SMALL_SAMPLE_CORR_THRESHOLD = 0.999999
 MEDIUM_SAMPLE_CORR_THRESHOLD = 0.98
 
 
-# ── 内部工具函数 ──────────────────────────────────────────────────
+# ── Internal helpers ──────────────────────────────────────────────────
 
 def _prepare_xy(df: pd.DataFrame, targets: Iterable[str],
                 drop_cols: Iterable[str], force_drop_cols: Iterable[str]):
@@ -294,7 +295,7 @@ def _group_audit(
     }
 
 
-# ── 主入口 (可编程调用) ───────────────────────────────────────────
+# ── Main entry point (programmatic use) ───────────────────────────────────────────
 
 def select_features(
     data_path: str | Path,
@@ -306,21 +307,22 @@ def select_features(
     output_dir: str | Path | None = None,
     report_name: str | None = None,
 ) -> dict:
-    """对全特征 CSV 做确定性、目标无关的冗余筛选。
+    """Apply deterministic, target-independent redundancy screening to a feature CSV.
 
     Parameters
     ----------
-    data_path: 原始输入编码后的特征 CSV 路径。
-    targets: 目标列名列表, 如 ``["Strength"]`` 或 ``["Strength", "TC"]``.
-    force_keep_cols: 原始输入锚点列。若仅在初始集常量则保留；若全池常量则删除。
-    force_drop_cols: 直接丢弃的列.
-    extra_drop_cols: 额外丢弃的列 (会与 force_drop_cols 合并).
-    output_dir: 若提供, 写入 per-target 选定特征 CSV 及报告 JSON.
-    report_name: JSON 报告文件名 (不含路径), 默认 ``feature_selection_report.json``.
+    data_path: Path to the feature CSV containing encoded raw inputs.
+    targets: Target column names, e.g. ``["Strength"]`` or ``["Strength", "TC"]``.
+    force_keep_cols: Raw-input anchor columns. Retain initial-set constants; drop full-pool constants.
+    force_drop_cols: Columns to drop unconditionally.
+    extra_drop_cols: Additional columns to drop (merged with force_drop_cols).
+    output_dir: If provided, write per-target selected-feature CSVs and a JSON report here.
+    report_name: JSON report filename (without a path); defaults to ``feature_selection_report.json``.
 
     Returns
     -------
-    dict 包含选定特征、筛选范围、常量/相关性决策和 feature-group 审计。
+    dict containing selected features, screening scope, constant/correlation
+    decisions, and a feature-group audit.
     """
     data_path = Path(data_path)
 

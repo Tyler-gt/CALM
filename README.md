@@ -27,6 +27,14 @@ python -m pip install -r requirements.txt
 
 The PyTorch command follows the [official installation instructions](https://pytorch.org/get-started/previous-versions/#v270).
 
+If a Windows Conda environment reports duplicate OpenMP runtimes (`OMP: Error #15`), set [MKL's sequential threading layer](https://www.intel.com/content/www/us/en/docs/onemkl/developer-guide-windows/2026-0/dynamic-select-the-interface-and-threading-layer.html) before starting Python:
+
+```powershell
+$env:MKL_THREADING_LAYER = "SEQUENTIAL"
+```
+
+This setting applies to the current shell and runs MKL operations in single-threaded mode.
+
 ## API configuration
 
 Copy [`common/llm/.env.example`](common/llm/.env.example) to `common/llm/.env` and fill in the key:
@@ -97,9 +105,17 @@ See [DATA_SOURCES.md](DATA_SOURCES.md) for sources, composition units and prepar
 
 For another dataset, register a `DatasetConfig` in [`calm/runner.py`](calm/runner.py) and use an explicit `--seed` for new runs. Supply a deduplicated CSV and matching column/deduplication records with recalculated hashes and row counts; see the [Al CSV](dabase/curated/al_alloys.csv), [column definitions](dabase/curated/al_alloys.columns.json) and [deduplication record](dabase/curated/al_alloys.dedup.json). Set the target, direction, composition unit and auxiliary-property exclusions explicitly; use `REPORTED_COMPOSITION_POLICY` when composition fields are unreported.
 
+Missing or inconsistent column records stop the run before API calls; they are never regenerated during a benchmark. Direct users of `LLMReviewer` must also supply `element_cols` and `process_cols` explicitly; `process_cols=[]` is valid.
+
 ## Outputs and code
 
 Default results go to `outputs/calm_paper_v1/<dataset>/`; other experiments and overrides use a separate `_custom/<hash>/<dataset>/` directory. Static knowledge scores are shared across comparisons under `outputs/calm_paper_v1/_static/`. Resume requires matching code, data, configuration and the same static scoring generation.
+
+Repeating a completed run preserves its results. Existing outputs from older code are also preserved and cannot be resumed with a different implementation. For an independent rerun with a fresh static-scoring cache, choose a new root:
+
+```bash
+python run.py --dataset 2xxx_T6__UTS --output-root outputs/rerun_01
+```
 
 | File | Contents |
 |---|---|

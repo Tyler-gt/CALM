@@ -1,4 +1,4 @@
-"""Acquisition 策略抽象基类."""
+"""Abstract base class for acquisition strategies."""
 
 from __future__ import annotations
 
@@ -9,7 +9,7 @@ import pandas as pd
 
 
 class AcquisitionStrategy(ABC):
-    """所有 acquisition 策略的统一接口."""
+    """Common interface for all acquisition strategies."""
 
     name: str = "base"
     needs_retrain: bool = True
@@ -24,22 +24,22 @@ class AcquisitionStrategy(ABC):
         n: int,
         rng: np.random.RandomState,
     ) -> np.ndarray:
-        """从 pool 中选择 n 个索引.
+        """Select n indices from the candidate pool.
 
         Parameters
         ----------
-        pool_X : 候选池特征矩阵
-        pool_scores : 预计算分数 (e.g. {"s_phys": array}), 可选
-        n : 要选择的数量
-        rng : 随机数生成器
+        pool_X : Candidate-pool feature matrix
+        pool_scores : Optional precomputed scores (e.g. {"s_phys": array})
+        n : Number of candidates to select
+        rng : Random number generator
 
         Returns
         -------
-        np.ndarray : pool 中被选中的索引 (int array, shape (n,))
+        np.ndarray : Selected indices in the pool (integer array, shape (n,))
         """
 
     def fit(self, X: pd.DataFrame, y: np.ndarray) -> None:
-        """用当前训练集训练/更新模型 (model-based strategies 重写)."""
+        """Train or update on the current training set; overridden by model-based strategies."""
         pass
 
     def export_run_state(self) -> dict:

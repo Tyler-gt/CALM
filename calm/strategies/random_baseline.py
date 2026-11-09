@@ -9,7 +9,7 @@ from .base import AcquisitionStrategy
 
 
 class RandomBaseline(AcquisitionStrategy):
-    """均匀随机选择."""
+    """Select candidates uniformly at random."""
 
     name = "Random"
     needs_retrain = False

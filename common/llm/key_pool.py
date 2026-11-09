@@ -314,6 +314,16 @@ class AsyncUSTCKeyPool:
             and "litellm.notfounderror" in message
         )
 
+    @classmethod
+    def is_retryable_status_error(cls, exc: APIStatusError) -> bool:
+        """Share HTTP retry classification with callers of the pool."""
+        status = int(getattr(exc, "status_code", 0) or 0)
+        return (
+            status in {408, 409, 425, 429}
+            or status >= 500
+            or cls._is_transient_model_route_error(exc)
+        )
+
     async def create_chat_completion(self, **kwargs):
         """Execute one request and return ``(response, key_alias)``."""
         clients = await self._clients_for_current_loop()
@@ -342,11 +352,7 @@ class AsyncUSTCKeyPool:
             ) from exc
         except APIStatusError as exc:
             status = int(getattr(exc, "status_code", 0) or 0)
-            if (
-                status in {408, 409, 425, 429}
-                or status >= 500
-                or self._is_transient_model_route_error(exc)
-            ):
+            if self.is_retryable_status_error(exc):
                 cooldown = self._mark_transient_failure(state, exc)
                 raise RetryableAPIKeyError(
                     f"{state.alias} cooling down for {cooldown:.1f}s after "

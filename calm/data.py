@@ -12,6 +12,7 @@ import hashlib
 import json
 import sys
 from pathlib import Path
+from tempfile import TemporaryDirectory
 
 import numpy as np
 import pandas as pd
@@ -853,7 +854,7 @@ def build_generic_features(
     return feats
 
 
-# ── LLM 列分类 ──────────────────────────────────────────────────────
+# ── LLM column classification ──────────────────────────────────────────────────────
 
 _COLUMN_DETECT_PROMPT = """\
 You are a materials informatics data curator. Given the column names and sample \
@@ -896,11 +897,15 @@ def _llm_detect_column_roles(
     model: str | None = None,
     api_key: str | None = None,
     base_url: str | None = None,
+    *,
+    allow_inference: bool = True,
 ) -> dict[str, list[str]]:
     """Classify all columns, explicitly isolating every measured response.
 
     Cache reuse requires the leakage-safe role schema and an exact source-column
-    fingerprint.  Legacy ``.columns.json`` files are intentionally invalidated.
+    fingerprint. Legacy caches can be regenerated only when ``allow_inference``
+    is true. Registered datasets use false to treat their sidecars as immutable:
+    missing, stale, or invalid roles fail before any request or sidecar write.
     """
     model = get_llm_model() if model is None else model
     base_url = validate_api_base_url(
@@ -918,9 +923,34 @@ def _llm_detect_column_roles(
         cache_path = Path(xlsx_path).with_suffix(".columns.json")
         if cache_path.exists():
             try:
-                cached = json.loads(cache_path.read_text(encoding="utf-8"))
-            except json.JSONDecodeError:
+                cached = _load_json_object(cache_path, label="column-role sidecar")
+            except (OSError, ValueError) as exc:
+                if not allow_inference:
+                    raise ValueError(
+                        f"Invalid required column-role sidecar: {cache_path}"
+                    ) from exc
                 cached = {}
+            role_names = (
+                "element_cols", "process_cols", "target_cols", "metadata_cols"
+            )
+            role_lists_valid = all(
+                isinstance(cached.get(role), list)
+                and all(isinstance(column, str) for column in cached[role])
+                for role in role_names
+            )
+            if not allow_inference:
+                if not role_lists_valid:
+                    raise ValueError(
+                        f"Required column-role sidecar must contain four lists "
+                        f"of column names: {cache_path}"
+                    )
+                # Validate the saved roles before normalization can remove
+                # duplicates or silently assign omitted columns to metadata.
+                _validate_column_roles(
+                    cached,
+                    columns,
+                    context=f"required column-role sidecar {cache_path}",
+                )
             curated_role_registry = (
                 cached.get("role_source")
                 in {
@@ -930,7 +960,8 @@ def _llm_detect_column_roles(
                 }
             )
             cache_ok = (
-                (
+                role_lists_valid
+                and (
                     curated_role_registry
                     or (
                         cached.get("schema_version")
@@ -959,6 +990,8 @@ def _llm_detect_column_roles(
                         context=f"cached column roles in {cache_path.name}",
                     )
                 except ValueError as exc:
+                    if not allow_inference:
+                        raise
                     print(f"[detect] Invalidating unusable column roles: {exc}")
                 else:
                     role_source = (
@@ -971,9 +1004,23 @@ def _llm_detect_column_roles(
                         f"{cache_path.name}"
                     )
                     return roles
+            if not allow_inference:
+                raise ValueError(
+                    f"Required column-role sidecar is stale or incompatible "
+                    f"with the source schema, values, or targets: {cache_path}"
+                )
             print(f"[detect] Invalidating legacy/stale column roles in {cache_path.name}")
 
-    # 每列取前 5 个非空样本值
+    if not allow_inference:
+        if cache_path is None:
+            raise ValueError(
+                "A dataset path is required to load immutable column-role sidecars"
+            )
+        raise FileNotFoundError(
+            f"Required column-role sidecar is missing: {cache_path}"
+        )
+
+    # Take the first 5 non-null values per column; hide known target values.
     sample_lines = []
     for col in df.columns:
         if str(col) in forced_targets:
@@ -1062,7 +1109,7 @@ def _llm_detect_column_roles(
     return roles
 
 
-# ── 通用数据集加载 ──────────────────────────────────────────────────
+# ── General dataset loading ──────────────────────────────────────────────────
 
 
 def load_external_dataset_initial_fit(
@@ -1084,8 +1131,28 @@ def load_external_dataset_initial_fit(
 
     The returned X covers every target-valid candidate. Initial indices identify
     the run and the labelled rows in audit exports; they do not select features.
-    Only the ``raw`` representation is supported.
+    Only the ``raw`` representation is supported. Omitting ``output_dir`` uses
+    temporary audit files and applies the same feature screening and ordering.
+    Omitted column roles must be supplied by a valid immutable sidecar.
     """
+    if output_dir is None:
+        with TemporaryDirectory(prefix="calm_features_") as temporary_output:
+            return load_external_dataset_initial_fit(
+                xlsx_path=xlsx_path,
+                target_col=target_col,
+                initial_idx=initial_idx,
+                element_cols=element_cols,
+                process_cols=process_cols,
+                target_cols=target_cols,
+                output_dir=temporary_output,
+                force_rerun_selection=force_rerun_selection,
+                normalize_mixed_units=normalize_mixed_units,
+                material_system=material_system,
+                composition_unit=composition_unit,
+                composition_missing_policy=composition_missing_policy,
+                feature_representation=feature_representation,
+            )
+
     from common.feature_engineer.feature_select import (
         FEATURE_SELECTION_POLICY_VERSION,
         select_features,
@@ -1112,6 +1179,7 @@ def load_external_dataset_initial_fit(
             target_col,
             xlsx_path=xlsx_path,
             known_target_cols=target_cols,
+            allow_inference=False,
         )
         if element_cols is None:
             element_cols = roles["element_cols"]

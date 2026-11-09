@@ -2,7 +2,30 @@
 
 from __future__ import annotations
 
+import json
+import math
 from typing import Any
+
+
+def parse_json_object(text: str) -> dict:
+    """Read exactly one JSON object, rejecting non-finite numeric values."""
+    def reject_constant(value: str):
+        raise ValueError(f"Non-finite JSON value: {value}")
+
+    def finite_float(value: str) -> float:
+        number = float(value)
+        if not math.isfinite(number):
+            raise ValueError("JSON number is not finite")
+        return number
+
+    result = json.loads(
+        text,
+        parse_constant=reject_constant,
+        parse_float=finite_float,
+    )
+    if not isinstance(result, dict):
+        raise ValueError("Response must be a JSON object")
+    return result
 
 
 def extract_message_text(message: Any) -> str:
