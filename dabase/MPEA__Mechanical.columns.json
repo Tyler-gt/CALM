@@ -1,0 +1,78 @@
+{
+  "composition_closure_audit": {
+    "maximum_after_exclusion": 100.00000000000202,
+    "minimum_after_exclusion": 99.99999999999702,
+    "sum_range": [
+      95.0,
+      105.0
+    ]
+  },
+  "composition_unit": "at.%",
+  "anchor_target_col": "YS_MPa",
+  "column_schema_fingerprint": "2ac4db13bda65d8f",
+  "element_cols": [
+    "Ag",
+    "Al",
+    "B",
+    "C",
+    "Ca",
+    "Co",
+    "Cr",
+    "Cu",
+    "Fe",
+    "Ga",
+    "Hf",
+    "Li",
+    "Mg",
+    "Mn",
+    "Mo",
+    "Nb",
+    "Nd",
+    "Ni",
+    "Pd",
+    "Re",
+    "Sc",
+    "Si",
+    "Sn",
+    "Ta",
+    "Ti",
+    "V",
+    "W",
+    "Y",
+    "Zn",
+    "Zr"
+  ],
+  "metadata_cols": [],
+  "model": "deepseek-v4-flash-ascend",
+  "physical_deduplication": {
+    "n_source_rows": 1545,
+    "n_unique_rows": 1154,
+    "target_aggregation": "median_ignore_missing",
+    "version": "physical_visible_inputs_numeric12_target_median_v1"
+  },
+  "process_cols": [
+    "Processing_method",
+    "Test_type",
+    "Test_temperature_C"
+  ],
+  "prompt_version": "four_roles_all_properties_hidden_v2",
+  "schema_version": "all_property_targets_v2",
+  "source_order_fingerprint": "c2d64a1799041288ec49cc35030129430bd7a9fca572e0df6183ff6424f15da2",
+  "target_cols": [
+    "Grain_size_um",
+    "Experimental_density_g_cm3",
+    "Calculated_density_g_cm3",
+    "Hardness_HV",
+    "YS_MPa",
+    "UTS_MPa",
+    "Elongation_percent",
+    "Plastic_elongation_percent",
+    "Experimental_Young_modulus_GPa",
+    "Calculated_Young_modulus_GPa",
+    "O_content_wppm",
+    "N_content_wppm",
+    "C_content_wppm"
+  ],
+  "role_assignment": "deterministic_section_a_publication_v1",
+  "role_source": "audited_external_extension_registry_v1"
+}

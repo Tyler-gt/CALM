@@ -1,0 +1,39 @@
+{
+  "anchor_target_col": "TEC_1e-6_K-1",
+  "column_schema_fingerprint": "9f806c6fd458bfea",
+  "element_cols": [
+    "Fe",
+    "Ni",
+    "Co",
+    "Cr",
+    "V",
+    "Cu"
+  ],
+  "metadata_cols": [],
+  "model": "deterministic_source_contract",
+  "physical_deduplication": {
+    "n_source_rows": 717,
+    "n_unique_rows": 709,
+    "target_aggregation": "median_ignore_missing",
+    "version": "hea_invar_composition_only_physical_dedup_v1"
+  },
+  "role_source": "curated_physical_dedup_registry_v1",
+  "process_cols": [],
+  "prompt_version": "four_roles_all_properties_hidden_v2",
+  "schema_version": "all_property_targets_v2",
+  "source_order_fingerprint": "6b2749019cb1d57781d5c21dfa7e890badc98754a16299e493cb200e9eea8be3",
+  "target_cols": [
+    "TEC_1e-6_K-1"
+  ],
+  "role_assignment": "deterministic_section_a_publication_v1",
+  "composition_unit": "at.%",
+  "composition_missing_policy": "complete_composition_required_v1",
+  "composition_closure_audit": {
+    "sum_range": [
+      95.0,
+      105.0
+    ],
+    "minimum_after_exclusion": 99.97079200329232,
+    "maximum_after_exclusion": 100.10000000000001
+  }
+}

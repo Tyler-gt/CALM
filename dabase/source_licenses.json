@@ -1,0 +1,99 @@
+{
+  "checked_on": "2026-11-09",
+  "scope": "Source-deposit licenses for the two datasets added to complete the nine-task paper inputs; code remains separately licensed under MIT.",
+  "datasets": [
+    {
+      "id": "HEA_Invar__TEC",
+      "title": "Machine learning-enabled high-entropy alloy discovery",
+      "creators": [
+        "Ziyuan Rao",
+        "Po-Yen Tung",
+        "Ruiwen Xie",
+        "Ye Wei",
+        "Hongbin Zhang",
+        "Alberto Ferrari",
+        "T.P.C. Klaver",
+        "Fritz Körmann",
+        "Prithiv Thoudden Sukumar",
+        "Alisson Kwiatkowski da Silva",
+        "Yao Chen",
+        "Zhiming Li",
+        "Dirk Ponge",
+        "Jörg Neugebauer",
+        "Oliver Gutfleisch",
+        "Stefan Bauer",
+        "Dierk Raabe"
+      ],
+      "version": "v1",
+      "dataset_doi": "10.5281/zenodo.7019194",
+      "dataset_url": "https://zenodo.org/records/7019194",
+      "metadata_url": "https://zenodo.org/api/records/7019194",
+      "publication_doi": "10.1126/science.abo4940",
+      "license": "CC-BY-4.0",
+      "license_url": "https://creativecommons.org/licenses/by/4.0/",
+      "license_evidence": "Zenodo metadata.license.id = cc-by-4.0; metadata.access_right = open.",
+      "source_file": "Data_base.xlsx",
+      "source_bytes": 190927,
+      "source_md5": "8c52e7f2a2882f803c7b9f7e1063cd51",
+      "source_sha256": "e85735dd9d240286333d1fa1008c09ea7ed8a8ddaacb678c8f2973d55f5f558c",
+      "processed_file": "dabase/HEA_Invar__TEC.csv",
+      "processed_sha256": "117394c7a4385db7f932ff28cd05d65641eff82179aa27c83edf5210c27e2c28",
+      "source_sidecar_sha256": {
+        "columns.json": "c2bde3001901308971816d0be8807baa423b380e2d16756fa53b45f34c620d7c",
+        "dedup.json": "7e407e69b194b691a5f660234493f59795c5ce7a66b3efec2299bedd6dcc8a10"
+      },
+      "published_sidecar_sha256": {
+        "columns.json": "c2bde3001901308971816d0be8807baa423b380e2d16756fa53b45f34c620d7c",
+        "dedup.json": "7e407e69b194b691a5f660234493f59795c5ce7a66b3efec2299bedd6dcc8a10"
+      },
+      "transformations": [
+        "Select Fe, Ni, Co, Cr, V, Cu and the thermal expansion target; omit derived descriptors and source labels.",
+        "Scale reported atomic fractions to atomic percent without renormalization.",
+        "Group identical compositions and median-aggregate responses: 717 source rows become 709 candidates."
+      ],
+      "publication_metadata_change": "None. Historical GitHub-specific license note is preserved in the deduplication record; this record adds the verified Zenodo deposit license."
+    },
+    {
+      "id": "MPEA__Mechanical",
+      "title": "Expanded dataset of mechanical properties and observed phases of multi-principal element alloys",
+      "creators": [
+        "Christopher Borg",
+        "Carolina Frey",
+        "Jasper Moh",
+        "Daniel Miracle",
+        "James E Saal",
+        "Bryce Meredig",
+        "Tresa Pollock",
+        "Stéphane Gorsse"
+      ],
+      "version": "v9",
+      "dataset_doi": "10.6084/m9.figshare.12642953.v9",
+      "dataset_url": "https://doi.org/10.6084/m9.figshare.12642953.v9",
+      "metadata_url": "https://api.figshare.com/v2/articles/12642953",
+      "publication_doi": "10.1038/s41597-020-00768-9",
+      "license": "CC-BY-4.0",
+      "license_url": "https://creativecommons.org/licenses/by/4.0/",
+      "license_evidence": "Figshare version 9 license.name = CC BY 4.0; license.url links to the Creative Commons deed.",
+      "source_file": "MPEA_dataset.csv",
+      "source_bytes": 332126,
+      "source_md5": "6d29eb6018157b863ca0033ccec936d5",
+      "source_sha256": "c5504d93fd324d1be26cf814d0694ee9ee95578d68a0b38aba6813b939fa2c5d",
+      "processed_file": "dabase/MPEA__Mechanical.csv",
+      "processed_sha256": "7d0ebef317a66d424e59251c67930fb8c409994b6ef306d52f85886079b18c51",
+      "source_sidecar_sha256": {
+        "columns.json": "81d41580d3f1f21dacc6d5f042b7c952babc5ef7e0c10e160bb852aad484388d",
+        "dedup.json": "54f9d9c8552a8334c92a724e8a6e3aff973425b1fb4054daaa94ed9ff2d6565d"
+      },
+      "published_sidecar_sha256": {
+        "columns.json": "caeb59b9b0af64ce8ab7a65cca997171fa0f8e0965be51ddde4d53934ffd9a3d",
+        "dedup.json": "54f9d9c8552a8334c92a724e8a6e3aff973425b1fb4054daaa94ed9ff2d6565d"
+      },
+      "transformations": [
+        "Parse formula coefficients into atomic percent; retain processing method, test type and test temperature.",
+        "Group identical visible inputs and median-aggregate responses: 1545 source rows become 1154 candidates; 362 have the registered UTS target.",
+        "Keep all measured/calculated auxiliary properties blocked from model and LLM inputs; retain source identifiers and references outside the modeling table."
+      ],
+      "publication_metadata_change": "Add role_source=audited_external_extension_registry_v1 to columns.json after checking complete, disjoint column roles and exact data fingerprints. Roles, source fingerprints and CSV bytes are unchanged."
+    }
+  ]
+}

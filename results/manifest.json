@@ -1,0 +1,277 @@
+{
+  "schema_version": "calm_paper_results_release_v1",
+  "canonical_manuscript": {
+    "source_path": "paper/final/latex/CALM_English_Manuscript.tex",
+    "sha256": "9f3022f23df6e2472b1b31064c993af3a5632c45dc0fba0645282f8827ab4801"
+  },
+  "selection_role": "post_hoc_descriptive",
+  "confirmatory": false,
+  "historical_strategy_display_names": {
+    "Hybrid": "CALM",
+    "Hybrid-static": "CALM-static"
+  },
+  "path_convention": "Published paths are relative to the CALM repository root; source paths are relative to the author research archive.",
+  "numerical_preservation": "All numerical observations and array ordering in the selected nine-task benchmark and 450 module-ablation trajectories are preserved. Omitted historical summary blocks are listed separately; no original research file or experiment was changed.",
+  "verification": {
+    "benchmark_tasks": 9,
+    "benchmark_strategy_runs": 900,
+    "paired_initial_sets": 900,
+    "complete_fixed_budgets": 900,
+    "unique_query_sequences": 900,
+    "ablation_strategy_runs": 450,
+    "maximum_benchmark_nauc_difference": 2.7755575615628914e-17,
+    "maximum_ablation_nauc_difference": 5.551115123125783e-17
+  },
+  "files": [
+    {
+      "path": "results/benchmark/Cu_alloys__EC/convergence.json",
+      "source_path": "final_results/updates/cu_ec_final_20260921/tasks/Cu_EC/convergence.json",
+      "source_sha256": "34a50f0123dc5cc27315558a92e56c5ff5897a362ec416896ed37de594bbd2eb",
+      "published_sha256": "14765c454ad30540d3c26e30a427595c35bcc9782851fac403b5554360571f4d",
+      "source_bytes": 3510185,
+      "published_bytes": 1767784,
+      "transformations": [
+        "Compact JSON serialization; all numeric values and array order preserved.",
+        "Machine-specific paths normalized to research_archive-relative provenance identifiers."
+      ]
+    },
+    {
+      "path": "results/benchmark/Cu_alloys__EC/initial_sets.json",
+      "source_path": "final_results/updates/cu_ec_final_20260921/tasks/Cu_EC/initial_sets.json",
+      "source_sha256": "1199ee123939e46ed5d87bd891379d547c0d82588043191edcfca9e066268bfc",
+      "published_sha256": "d9402bf8d19c852d9a023f8e5448a46f0f21a45adc8b11a654f3f89b030c81e9",
+      "source_bytes": 20299,
+      "published_bytes": 7956,
+      "transformations": [
+        "Compact JSON serialization; actual run seeds, ordered initial indices and hashes unchanged."
+      ]
+    },
+    {
+      "path": "results/benchmark/HEA_Invar__TEC/convergence.json",
+      "source_path": "final_results/tasks/HEA_Invar_TEC/convergence.json",
+      "source_sha256": "35a243ab3172d1f2a55a405a5222783a37714787f923d9bbee42a8b518e45b29",
+      "published_sha256": "42cd0464182567ccdbf2a662ee28b57013910c84bcb1fd0ae9bdb9f7d3ecd91d",
+      "source_bytes": 3086062,
+      "published_bytes": 1721122,
+      "transformations": [
+        "Compact JSON serialization; all numeric values and array order preserved.",
+        "Machine-specific paths normalized to research_archive-relative provenance identifiers."
+      ]
+    },
+    {
+      "path": "results/benchmark/HEA_Invar__TEC/initial_sets.json",
+      "source_path": "final_results/tasks/HEA_Invar_TEC/initial_sets.json",
+      "source_sha256": "6e4548d80faf9d192d6091f143c4a1a6ac16666ae965ed1b33f3f1e691ebccfa",
+      "published_sha256": "384ed3476448275724ea7c0f7e556994632b283d2f6f3742885d3a3a00f72542",
+      "source_bytes": 10468,
+      "published_bytes": 4365,
+      "transformations": [
+        "Compact JSON serialization; actual run seeds, ordered initial indices and hashes unchanged."
+      ]
+    },
+    {
+      "path": "results/benchmark/MPEA__UTS/convergence.json",
+      "source_path": "final_results/tasks/MPEA_UTS/convergence.json",
+      "source_sha256": "a08247594e306d45df3cc23710b958e511e0f04f1005a7a422f9a089a9a8f06c",
+      "published_sha256": "a14cb5336bcb3c2b442aa9a05b8d5545dee196ce9981d856c1a823a76bb244ba",
+      "source_bytes": 2726195,
+      "published_bytes": 1577497,
+      "transformations": [
+        "Compact JSON serialization; all numeric values and array order preserved.",
+        "Machine-specific paths normalized to research_archive-relative provenance identifiers."
+      ]
+    },
+    {
+      "path": "results/benchmark/MPEA__UTS/initial_sets.json",
+      "source_path": "final_results/tasks/MPEA_UTS/initial_sets.json",
+      "source_sha256": "4debc7a2e9ae108064f14458180d89b1c45cea84f9b40b2915c848ee6659e9ee",
+      "published_sha256": "40a663e5a5b20bbb8f974e5c448b2e0b2a3d0b7cd12567969aa4997e0ac4e792",
+      "source_bytes": 6396,
+      "published_bytes": 3013,
+      "transformations": [
+        "Compact JSON serialization; actual run seeds, ordered initial indices and hashes unchanged."
+      ]
+    },
+    {
+      "path": "results/benchmark/mg_alloy__UTS/convergence.json",
+      "source_path": "final_results/tasks/Mg_UTS/convergence.json",
+      "source_sha256": "3924dbbbbbce9c3966ef3556c52681e0ebd0f9220f5366e37647e155fecdaa1d",
+      "published_sha256": "e59397f4bb565d25f77bed976a5a99198bcef1ea071abcfffa3fa931e5d474e8",
+      "source_bytes": 2481156,
+      "published_bytes": 1455513,
+      "transformations": [
+        "Compact JSON serialization; all numeric values and array order preserved.",
+        "Machine-specific paths normalized to research_archive-relative provenance identifiers."
+      ]
+    },
+    {
+      "path": "results/benchmark/mg_alloy__UTS/initial_sets.json",
+      "source_path": "final_results/tasks/Mg_UTS/initial_sets.json",
+      "source_sha256": "48a15946dc6e411c4107f471678ce756634de84ad58886f40163316440e168ce",
+      "published_sha256": "dede488de9c194f7032ef6cb64944c1862ff03a7ef994dfe78996c3d660ed5da",
+      "source_bytes": 5438,
+      "published_bytes": 2695,
+      "transformations": [
+        "Compact JSON serialization; actual run seeds, ordered initial indices and hashes unchanged."
+      ]
+    },
+    {
+      "path": "results/benchmark/Ti_alloy__YS/convergence.json",
+      "source_path": "final_results/tasks/Ti_YS/convergence.json",
+      "source_sha256": "36e65c108baf554eda0443b0835e9700153352ed0aab9cbd3f5a591f6441c8ea",
+      "published_sha256": "caf876f9f094c408e24b7c9d97210b5cd4e8d47dac18f73f8f74be8ef1fdad32",
+      "source_bytes": 2375958,
+      "published_bytes": 1395725,
+      "transformations": [
+        "Compact JSON serialization; all numeric values and array order preserved.",
+        "Machine-specific paths normalized to research_archive-relative provenance identifiers."
+      ]
+    },
+    {
+      "path": "results/benchmark/Ti_alloy__YS/initial_sets.json",
+      "source_path": "final_results/tasks/Ti_YS/initial_sets.json",
+      "source_sha256": "2d33b219cae4ec8cdeb0dab67788f12fa0c87e6ef8068fea6345d60e09ac0b78",
+      "published_sha256": "dbb3018c640a200f1a689d7e900c9234c1f6181485d25d44020e03662e388fc3",
+      "source_bytes": 4958,
+      "published_bytes": 2535,
+      "transformations": [
+        "Compact JSON serialization; actual run seeds, ordered initial indices and hashes unchanged."
+      ]
+    },
+    {
+      "path": "results/benchmark/Ti_alloy__UTS/convergence.json",
+      "source_path": "final_results/tasks/Ti_UTS/convergence.json",
+      "source_sha256": "42f10db6b3269189be3a651dda627bfaee5b2b8230c587639b3c69243b9b2053",
+      "published_sha256": "d8c76572ff4f9ae6fe58728d4ee8e34d09ceaf791eb8f4f0dcd2a158e27297c9",
+      "source_bytes": 2022204,
+      "published_bytes": 1206351,
+      "transformations": [
+        "Compact JSON serialization; all numeric values and array order preserved.",
+        "Machine-specific paths normalized to research_archive-relative provenance identifiers."
+      ]
+    },
+    {
+      "path": "results/benchmark/Ti_alloy__UTS/initial_sets.json",
+      "source_path": "final_results/tasks/Ti_UTS/initial_sets.json",
+      "source_sha256": "be476ad6b3c27e36c6ea7e7118fdc6c78c9bb48355706009dc97270b6a42e9ce",
+      "published_sha256": "8892a09f2ec8ab60d432933ebfe46a4ac24e6bb86afd6b30f687186ba41a5cfb",
+      "source_bytes": 4223,
+      "published_bytes": 2280,
+      "transformations": [
+        "Compact JSON serialization; actual run seeds, ordered initial indices and hashes unchanged."
+      ]
+    },
+    {
+      "path": "results/benchmark/mg_alloy__YS/convergence.json",
+      "source_path": "final_results/tasks/Mg_YS/convergence.json",
+      "source_sha256": "4921f7e2b1fc43eb8e6ffb533f7c71c013e653c3bf3c0486d8993a70b5ebc862",
+      "published_sha256": "57e0e0f4c653c026e95586c05a80c8d7bb02c1d56745289e7fb03eda32a3958a",
+      "source_bytes": 2488459,
+      "published_bytes": 1457067,
+      "transformations": [
+        "Compact JSON serialization; all numeric values and array order preserved.",
+        "Machine-specific paths normalized to research_archive-relative provenance identifiers."
+      ]
+    },
+    {
+      "path": "results/benchmark/mg_alloy__YS/initial_sets.json",
+      "source_path": "final_results/tasks/Mg_YS/initial_sets.json",
+      "source_sha256": "617cf8914310085afd66da1136788cfccd5158cc4bfd1d18c4c0b1d04f2350cb",
+      "published_sha256": "81d140914247f1450266616cc2dc34ae0fdc5ec1f55f977a3509941351f51555",
+      "source_bytes": 5550,
+      "published_bytes": 2727,
+      "transformations": [
+        "Compact JSON serialization; actual run seeds, ordered initial indices and hashes unchanged."
+      ]
+    },
+    {
+      "path": "results/benchmark/2xxx_T6__EL/convergence.json",
+      "source_path": "final_results/tasks/Al_EL/convergence.json",
+      "source_sha256": "b89f596f30d92049fe622d2dd41517793a60b2270683753d561ba41959b433aa",
+      "published_sha256": "f1a03558c521028ba67e2a1c1497b87a91ef9e47b1c516c8c3528983090634fe",
+      "source_bytes": 1818992,
+      "published_bytes": 1100375,
+      "transformations": [
+        "Compact JSON serialization; all numeric values and array order preserved.",
+        "Machine-specific paths normalized to research_archive-relative provenance identifiers."
+      ]
+    },
+    {
+      "path": "results/benchmark/2xxx_T6__EL/initial_sets.json",
+      "source_path": "final_results/tasks/Al_EL/initial_sets.json",
+      "source_sha256": "605495f7ab65ee4686f081bbe7f19589c3bb9ff763dab516e0779de5f456130e",
+      "published_sha256": "1c437277e089f4c8a82acd96309e434ae6f4c70d55f97f08791f2866d468fdca",
+      "source_bytes": 3620,
+      "published_bytes": 2077,
+      "transformations": [
+        "Compact JSON serialization; actual run seeds, ordered initial indices and hashes unchanged."
+      ]
+    },
+    {
+      "path": "results/benchmark/2xxx_T6__UTS/convergence.json",
+      "source_path": "final_results/tasks/Al_UTS/convergence.json",
+      "source_sha256": "c74fd8d48a4fd26b65d28b9e1ab1a7cda733bfa8e66839780380c24277b99bbb",
+      "published_sha256": "b79d5093dc2affbdecdf4f126d85d69d5e4d7fdcc3d929025783f39a5685ca83",
+      "source_bytes": 1811012,
+      "published_bytes": 1089332,
+      "transformations": [
+        "Compact JSON serialization; all numeric values and array order preserved.",
+        "Machine-specific paths normalized to research_archive-relative provenance identifiers."
+      ]
+    },
+    {
+      "path": "results/benchmark/2xxx_T6__UTS/initial_sets.json",
+      "source_path": "final_results/tasks/Al_UTS/initial_sets.json",
+      "source_sha256": "6bbf7d0d09c942735933e4b8045865c93b15c489509a71c0e40a82d5e3bfcfa1",
+      "published_sha256": "cac5cb350af71f0b164cc1d20568adaf22118bf0b32a40fe4e2d2a679eb7860c",
+      "source_bytes": 3628,
+      "published_bytes": 2085,
+      "transformations": [
+        "Compact JSON serialization; actual run seeds, ordered initial indices and hashes unchanged."
+      ]
+    },
+    {
+      "path": "results/benchmark/summary.json",
+      "source_path": "paper/calm_results_final.json",
+      "source_sha256": "22b9c3dd7153d4f3a731e4defe889ad7c650aa63b408ed6e94ef76b9e4e71605",
+      "published_sha256": "33b1eed3ffbb80b9f2d8ef30fd7751fddfae4d86c3f0f50794017e12a20efd81",
+      "source_bytes": 184991,
+      "published_bytes": 54839,
+      "transformations": [
+        "Current nine-task cohort metrics, task order, selected run identities and per-strategy numerical summaries preserved. Superseded sensitivity snapshots and unused legacy inferential summaries omitted from this publication view.",
+        "Chinese selection notes and labels replaced by equivalent concise English descriptions.",
+        "Main task file references/hashes point to packaged results; original identities retained.",
+        "Machine paths normalized; historical source-package hash explicitly labeled."
+      ]
+    },
+    {
+      "path": "results/ablations.json",
+      "source_path": "analysis/outputs/ablation_complete_20261027/results.json",
+      "source_sha256": "7c9263faaadbf17dcb863f9399a070f622010e4b15489603dac6a08c46267fcd",
+      "published_sha256": "72f8ae20927e413a3e04ce93e1e0c135563a5d0fa35ce7731e3a0615c20558bd",
+      "source_bytes": 2413494,
+      "published_bytes": 1460046,
+      "transformations": [
+        "All 450 per-run measurements, 7150 curve records, comparisons and numerical summaries preserved.",
+        "Omitted 1289 internal source-hash entries and per-run internal source paths; aggregate hash retained.",
+        "Main-cohort references point to packaged benchmark trajectories."
+      ]
+    }
+  ],
+  "summary_scope_omissions": {
+    "global_fields": [
+      "al_original_sensitivity",
+      "mpea_original_sensitivity",
+      "hea_extension_sensitivity",
+      "historical_sensitivities_source",
+      "calm_static_holm9",
+      "statistical_method"
+    ],
+    "fields_within_each_main_task": [
+      "comparisons",
+      "holm6",
+      "component_contrasts"
+    ],
+    "reason": "These superseded sensitivity/status snapshots and legacy inferential summaries are outside the current manuscript figure/table reproduction scope. The current selected-cohort trajectories, descriptive metrics, ranks, seeds and run replacements are retained. Original source files remain unchanged under their recorded hashes."
+  }
+}

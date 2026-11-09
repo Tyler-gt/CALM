@@ -1,0 +1,86 @@
+{
+  "purpose": "Frozen numeric inputs for the current manuscript figures. Historical paths identify sources; reproduction does not access them.",
+  "files": [
+    {
+      "file": "knowledge_ranks.csv",
+      "sha256": "088b1058c3b584320ab0435fe3dd1ef3c2ddb4dc822ac52414eb92a5b30cf780",
+      "description": "All 90 final-prequery shortlist comparisons, unchanged.",
+      "sources": [
+        {
+          "location": "research/paper/figures/knowledge_improvement_preview_20260929/paired_run_data.csv",
+          "sha256": "088b1058c3b584320ab0435fe3dd1ef3c2ddb4dc822ac52414eb92a5b30cf780"
+        }
+      ]
+    },
+    {
+      "file": "mpea_case.json",
+      "sha256": "88ee4135a7df3da7d40095134cf012f0864448404184b440ad8d94e12aed27ed",
+      "description": "Figure 7: measured compositions, rationale excerpts and same-state ranks.",
+      "sources": [
+        {
+          "location": "research/paper/figures/20260924_llm_judgment_case/case_evidence.json",
+          "sha256": "87249acf0574c28d1813ef03332130efe37fa13ffc3a2b50461ee5dc685ae28f"
+        },
+        {
+          "location": "research/paper/figures/20260924_mpea_decision_audit/decision_audit.json",
+          "sha256": "47bd8127cbf57b70d7c70dcaeecf9da3eae58b67733b0bd4282d8fca53e103d6"
+        }
+      ]
+    },
+    {
+      "file": "mpea_search.json",
+      "sha256": "92032b1246dfdc31a07c740898a6cb33f1e9001e6f4e220dbed04b2dd712b0f2",
+      "description": "Figures 8/S21: fixed PCA coordinates and complete paired run-7 searches.",
+      "sources": [
+        {
+          "location": "research/paper/figures/20260908_mpea_case/mpea_run7_audit.json",
+          "sha256": "1057bcb8f87d8d3183366be4cb9c3dfb2dabb50f91b91eaf7485a071d1e7fe71"
+        }
+      ]
+    },
+    {
+      "file": "ewrc_selection.json",
+      "sha256": "66fd2abcca6aa75a65f665e15399c304ba34d34be0bdc342f8757a5559ff479b",
+      "description": "Figure 9: full 15-batch weight/best trajectories and selection-count scope.",
+      "sources": [
+        {
+          "location": "manuscript_workspace/figures/fig9_full_run_20261102/figure_data.json",
+          "sha256": "12347ba0cf4755c3d102c04624b8407b4d6e3dc7d2dd4608a625d0b3546918f2"
+        }
+      ]
+    },
+    {
+      "file": "ewrc_queries.csv",
+      "sha256": "a84e7688e65cfb8cf9e5ba9eeb1532eeb9319dbb4de3187ca3659e850e890963",
+      "description": "All 218 eligible states; measured selections under actual and preceding weights. Runtime report paths excluded.",
+      "sources": [
+        {
+          "location": "research/analysis/outputs/ewrc_same_state_full_20260928/query_results.csv",
+          "sha256": "27c7549336600b8eae7a5e4a9df08031315799a621f1d523e14492fc139dc876"
+        }
+      ]
+    },
+    {
+      "file": "first_batch.json",
+      "sha256": "a0abaf78bd9970cccccd530f8c2d7df5470c145454a55b2b30d73198fb1eefb2",
+      "description": "Figure S18 and Tables S15.1-3: all 90 paired runs and the 83-run sensitivity cohort.",
+      "sources": [
+        {
+          "location": "manuscript_workspace/figures/first_batch_precision_v2_20261023/data/source_results.json",
+          "sha256": "258db8d5f8733ed541b05fdc85e919ac1548b1f0823fa072bbd556d10c738244"
+        }
+      ]
+    },
+    {
+      "file": "knowledge_reliability.json",
+      "sha256": "d99c6342036f96ac99048dee10b4d5304fb000e3edccdbee10319b9e1b6b5186",
+      "description": "Figure S22: 218 states from 55 runs; task-balanced agreement errors.",
+      "sources": [
+        {
+          "location": "manuscript_workspace/output/section25_reliability_diagnostic_20261028/results.json",
+          "sha256": "49c3757516935b69543cf808f7002aa7b9b92efcea5865000a6072851dd61421"
+        }
+      ]
+    }
+  ]
+}

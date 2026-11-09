@@ -35,6 +35,16 @@ $env:MKL_THREADING_LAYER = "SEQUENTIAL"
 
 This setting applies to the current shell and runs MKL operations in single-threaded mode.
 
+## Reproduce the paper figures
+
+Prepared inputs for all nine tasks and the frozen results needed for the manuscript figures and tables are included. To generate the figures and table data without API calls or model training:
+
+```bash
+python reproduce/figures.py --output-dir outputs/paper_figures
+```
+
+The command generates main Figures 1–9, Tables 1–2, supplementary Figures S18–S22 and Tables S15.1–S15.3 and S16.1. It uses the selected paper runs, including their recorded run replacements. See [`results/README.md`](results/README.md) for the archived results and [`results/figure_data/README.md`](results/figure_data/README.md) for the figure sources. Figures 1 and 2 are authored schematics copied from the manuscript assets; quantitative plots use a portable font and the manuscript's numerical values and panel definitions.
+
 ## API configuration
 
 Copy [`common/llm/.env.example`](common/llm/.env.example) to `common/llm/.env` and fill in the key:
@@ -64,7 +74,7 @@ python run.py --dataset 2xxx_T6__UTS --experiment supplementary
 
 Initialization uses 10% of the candidate pool, batches use 2%, and the total measurement budget is 40%, including initialization. Counts follow the paper's rounding rules and the final batch is truncated. Strategies share initial sets, inputs and measurement schedules, then learn from their own observations.
 
-Default seeds match the selected manuscript cohort in [`calm/benchmark.py`](calm/benchmark.py), including the Mg UTS seed group and recorded run replacements. The cohort is descriptive and was selected after inspecting results. `--n-runs` takes the first requested paper runs; `--seed 42` instead generates a new paired experiment. Fresh API responses and the revised implementation are not an archive of the published result trajectories.
+Default seeds match the selected manuscript cohort in [`calm/benchmark.py`](calm/benchmark.py), including the Mg UTS seed group and recorded run replacements. The cohort is descriptive and was selected after inspecting results. `--n-runs` takes the first requested paper runs; `--seed 42` instead generates a new paired experiment. Fresh API responses and the revised implementation can produce different trajectories; use the bundled results to reproduce the manuscript figures.
 
 ## Module ablations
 
@@ -87,19 +97,19 @@ Ablations retain the same ensemble, knowledge branch and paired initialization, 
 
 ## Data
 
-The registered tasks match the nine tasks in the manuscript. Six bundled CSVs support seven tasks; HEA Invar and MPEA require separately supplied prepared inputs.
+The eight bundled CSVs support all nine tasks in the manuscript.
 
-| Task ID | Property | Direction | Candidates | Included |
-|---|---|---|---:|---|
-| `Cu_alloys__EC` | Electrical conductivity | Maximize | 1486 | Yes |
-| `HEA_Invar__TEC` | Thermal expansion | Minimize | 709 | No |
-| `MPEA__UTS` | Ultimate strength | Maximize | 362 | No |
-| `mg_alloy__UTS` | Ultimate tensile strength | Maximize | 289 | Yes |
-| `Ti_alloy__YS` | Yield strength | Maximize | 248 | Yes |
-| `Ti_alloy__UTS` | Ultimate tensile strength | Maximize | 185 | Yes |
-| `mg_alloy__YS` | Yield strength | Maximize | 298 | Yes |
-| `2xxx_T6__EL` | Elongation | Maximize | 134 | Yes |
-| `2xxx_T6__UTS` | Ultimate tensile strength | Maximize | 138 | Yes |
+| Task ID | Property | Direction | Candidates |
+|---|---|---|---:|
+| `Cu_alloys__EC` | Electrical conductivity | Maximize | 1486 |
+| `HEA_Invar__TEC` | Thermal expansion | Minimize | 709 |
+| `MPEA__UTS` | Ultimate strength | Maximize | 362 |
+| `mg_alloy__UTS` | Ultimate tensile strength | Maximize | 289 |
+| `Ti_alloy__YS` | Yield strength | Maximize | 248 |
+| `Ti_alloy__UTS` | Ultimate tensile strength | Maximize | 185 |
+| `mg_alloy__YS` | Yield strength | Maximize | 298 |
+| `2xxx_T6__EL` | Elongation | Maximize | 134 |
+| `2xxx_T6__UTS` | Ultimate tensile strength | Maximize | 138 |
 
 See [DATA_SOURCES.md](DATA_SOURCES.md) for sources, composition units and preparation. Unknown inputs remain missing, and all target/auxiliary-property columns are excluded from model and LLM inputs. Al UTS and EL share one table.
 

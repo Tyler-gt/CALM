@@ -25,7 +25,5 @@ __pycache__/
 .DS_Store
 Thumbs.db
 
-# External inputs not included in this distribution
-dabase/MPEA__Mechanical.*
-dabase/HEA_Invar__TEC.*
+# Original downloads and preparation workspaces
 dabase/external_datasets/

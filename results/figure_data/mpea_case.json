@@ -1,0 +1,334 @@
+{
+  "case_id": "MPEA_UTS_run7_batch5_c131",
+  "task": {
+    "registered_id": "MPEA__UTS",
+    "target_field": "UTS_MPa",
+    "target_unit": "MPa",
+    "direction": "maximize",
+    "composition_unit": "at.%",
+    "target_semantics": "The registered UTS field contains mixed tension/compression records; this candidate and M1 are both compression records. Do not relabel this observation as a new tensile test."
+  },
+  "selection_role": "Post-hoc explanatory process case restricted to the existing final manuscript cohort.",
+  "candidate": {
+    "candidate_index_zero_based": 131,
+    "composition_at_percent": {
+      "Mo": 21.052631578947,
+      "Nb": 21.052631578947,
+      "Ti": 21.052631578947,
+      "V": 15.789473684211,
+      "Zr": 21.052631578947
+    },
+    "registered_conditions": {
+      "Processing_method": "CAST",
+      "Test_type": "C",
+      "Test_temperature_C": 25.0
+    },
+    "full_registered_input": {
+      "Ag": 0.0,
+      "Al": 0.0,
+      "B": 0.0,
+      "C": 0.0,
+      "Ca": 0.0,
+      "Co": 0.0,
+      "Cr": 0.0,
+      "Cu": 0.0,
+      "Fe": 0.0,
+      "Ga": 0.0,
+      "Hf": 0.0,
+      "Li": 0.0,
+      "Mg": 0.0,
+      "Mn": 0.0,
+      "Mo": 21.052631578947,
+      "Nb": 21.052631578947,
+      "Nd": 0.0,
+      "Ni": 0.0,
+      "Pd": 0.0,
+      "Processing_method": "CAST",
+      "Re": 0.0,
+      "Sc": 0.0,
+      "Si": 0.0,
+      "Sn": 0.0,
+      "Ta": 0.0,
+      "Test_temperature_C": 25.0,
+      "Test_type": "C",
+      "Ti": 21.052631578947,
+      "V": 15.789473684211,
+      "W": 0.0,
+      "Y": 0.0,
+      "Zn": 0.0,
+      "Zr": 21.052631578947
+    },
+    "measured_value": 3929.0,
+    "first_measured_batch": 5
+  },
+  "local_reference_M1": {
+    "candidate_index_zero_based": 134,
+    "composition_at_percent": {
+      "Mo": 16.666666666667,
+      "Nb": 16.666666666667,
+      "Ti": 16.666666666667,
+      "V": 33.333333333333,
+      "Zr": 16.666666666667
+    },
+    "registered_conditions": {
+      "Processing_method": "CAST",
+      "Test_type": "C",
+      "Test_temperature_C": 25.0
+    },
+    "full_registered_input": {
+      "Ag": 0.0,
+      "Al": 0.0,
+      "B": 0.0,
+      "C": 0.0,
+      "Ca": 0.0,
+      "Co": 0.0,
+      "Cr": 0.0,
+      "Cu": 0.0,
+      "Fe": 0.0,
+      "Ga": 0.0,
+      "Hf": 0.0,
+      "Li": 0.0,
+      "Mg": 0.0,
+      "Mn": 0.0,
+      "Mo": 16.666666666667,
+      "Nb": 16.666666666667,
+      "Nd": 0.0,
+      "Ni": 0.0,
+      "Pd": 0.0,
+      "Processing_method": "CAST",
+      "Re": 0.0,
+      "Sc": 0.0,
+      "Si": 0.0,
+      "Sn": 0.0,
+      "Ta": 0.0,
+      "Test_temperature_C": 25.0,
+      "Test_type": "C",
+      "Ti": 16.666666666667,
+      "V": 33.333333333333,
+      "W": 0.0,
+      "Y": 0.0,
+      "Zn": 0.0,
+      "Zr": 16.666666666667
+    },
+    "measured_value": 3176.0,
+    "first_measured_batch": 4,
+    "memory_created_before_batch": 5,
+    "first_dynamic_assessment_before_batch": 5,
+    "selected_option_id": "P2",
+    "target_values_hidden_at_selection": true,
+    "selected_within_x_only_prefilter": true,
+    "selection_evidence_id": "0210e29fdfc7899063739f6e4c627694406daa5e",
+    "shared_anchor_ids_in_batch5": [],
+    "is_evidence_of_cross_round_persistence": false
+  },
+  "shared_feedback_batch5": {
+    "anchors": [
+      {
+        "anchor_id": "A1",
+        "candidate_index": 358,
+        "measured_value": 3673.39990234375,
+        "role": "best",
+        "first_measured_batch": 2
+      },
+      {
+        "anchor_id": "A2",
+        "candidate_index": 357,
+        "measured_value": 3641.5,
+        "role": "best",
+        "first_measured_batch": 2
+      },
+      {
+        "anchor_id": "A3",
+        "candidate_index": 50,
+        "measured_value": 3333.800048828125,
+        "role": "best",
+        "first_measured_batch": 3
+      },
+      {
+        "anchor_id": "A4",
+        "candidate_index": 242,
+        "measured_value": 95.0,
+        "role": "worst",
+        "first_measured_batch": 0
+      },
+      {
+        "anchor_id": "A5",
+        "candidate_index": 91,
+        "measured_value": 225.0,
+        "role": "worst",
+        "first_measured_batch": 0
+      },
+      {
+        "anchor_id": "A6",
+        "candidate_index": 29,
+        "measured_value": 3208.0,
+        "role": "nearby",
+        "first_measured_batch": 4
+      },
+      {
+        "anchor_id": "A7",
+        "candidate_index": 23,
+        "measured_value": 2375.0,
+        "role": "nearby",
+        "first_measured_batch": 0
+      },
+      {
+        "anchor_id": "A8",
+        "candidate_index": 27,
+        "measured_value": 2280.0,
+        "role": "nearby",
+        "first_measured_batch": 1
+      }
+    ],
+    "best_anchor_id": "A1",
+    "best_anchor_candidate_index": 358,
+    "best_anchor_value_exact": 3673.39990234375,
+    "best_anchor_value_display": 3673.4
+  },
+  "timeline": [
+    {
+      "stage": "initial_static_scoring",
+      "candidate": 131,
+      "score_normalized": 0.72,
+      "measured_feedback_used": false
+    },
+    {
+      "stage": "after_batch4",
+      "measured_candidate": 134,
+      "measured_value": 3176.0,
+      "total_measured_candidates": 65
+    },
+    {
+      "stage": "before_batch5",
+      "candidate": 131,
+      "first_dynamic_assessment": true,
+      "new_M1_candidate": 134,
+      "remaining_pool_size": 297,
+      "shortlist_size": 75,
+      "score_normalized": 0.88,
+      "same_state_static_rank_one_is_best": 187,
+      "same_state_dynamic_rank_one_is_best": 4
+    },
+    {
+      "stage": "after_batch5",
+      "queried_candidate": 131,
+      "measured_value": 3929.0,
+      "total_measured_candidates": 72,
+      "best_value_before": 3673.39990234375,
+      "best_value_after": 3929.0,
+      "candidate_pool_optimum_reached": true
+    }
+  ],
+  "llm_outputs_verbatim": {
+    "static_reason": "The candidate is a refractory BCC MPEA with high levels of Mo, Nb, Ti, V, and Zr, which are known to provide strong solid-solution strengthening due to significant atomic size mismatches. At room temperature, such alloys often exhibit high UTS, but the cast state and absence of ductile elements like Ni or Co may lead to limited tensile ductility and potential brittle fracture, which could cap the achievable UTS. The composition is within the explored ranges and aligns with high-strength refractory alloy families, but without literature evidence or measured anchors, the objective utility is plausible but not near-optimal. Score 72 reflects a strong candidate with minor target-relevant concerns about ductility-limited UTS.",
+    "memory_selection_reason": "P2 shares the same refractory BCC alloy family (Mo-Nb-Ti-V-Zr) with the candidate, identical CAST processing, room-temperature compression, and similar equiatomic-like proportions, differing mainly in V/Zr balance, making it a mechanistically close comparator for solid-solution strengthening and phase stability.",
+    "dynamic_reason": "The candidate is a refractory MPEA with Mo, Nb, Ti, V, Zr, all BCC-stabilizing elements with large atomic size differences, promoting strong solid-solution strengthening. CAST at 25°C matches the best-performing anchors (A1, A2) which are also CAST and room-temperature tested, and the composition is close to M1 (Mo-Nb-Ti-V-Zr) which measured 3176 MPa. The candidate has slightly higher Mo and Zr and lower V than M1, which may increase lattice distortion and strength, but also risks forming brittle intermetallics that could reduce UTS. It should rank between M1 (3176) and the best anchors (3673), but not exceed them because it lacks the Al-Cr-Fe-Ni matrix that appears in the top anchors, which likely provides additional precipitation or ordering strengthening. Thus, s_target_raw=88, slightly below the best anchors but above M1."
+  },
+  "verbatim_excerpts": [
+    {
+      "id": "initial_evidence_gap",
+      "source_field": "static_reason",
+      "exact_contiguous_text": "without literature evidence or measured anchors, the objective utility is plausible but not near-optimal.",
+      "character_start_zero_based": 523,
+      "character_end_exclusive": 628,
+      "omitted_before": true,
+      "omitted_after": true,
+      "display_with_omission_markers": "… without literature evidence or measured anchors, the objective utility is plausible but not near-optimal. …",
+      "verbatim_verified": true
+    },
+    {
+      "id": "initial_strength_concern",
+      "source_field": "static_reason",
+      "exact_contiguous_text": "the cast state and absence of ductile elements like Ni or Co may lead to limited tensile ductility and potential brittle fracture, which could cap the achievable UTS.",
+      "character_start_zero_based": 249,
+      "character_end_exclusive": 415,
+      "omitted_before": true,
+      "omitted_after": true,
+      "display_with_omission_markers": "… the cast state and absence of ductile elements like Ni or Co may lead to limited tensile ductility and potential brittle fracture, which could cap the achievable UTS. …",
+      "verbatim_verified": true
+    },
+    {
+      "id": "target_blind_reference_selection",
+      "source_field": "memory_selection_reason",
+      "exact_contiguous_text": "P2 shares the same refractory BCC alloy family (Mo-Nb-Ti-V-Zr) with the candidate, identical CAST processing, room-temperature compression, and similar equiatomic-like proportions, differing mainly in V/Zr balance",
+      "character_start_zero_based": 0,
+      "character_end_exclusive": 213,
+      "omitted_before": false,
+      "omitted_after": true,
+      "display_with_omission_markers": "P2 shares the same refractory BCC alloy family (Mo-Nb-Ti-V-Zr) with the candidate, identical CAST processing, room-temperature compression, and similar equiatomic-like proportions, differing mainly in V/Zr balance …",
+      "verbatim_verified": true
+    },
+    {
+      "id": "measured_reference",
+      "source_field": "dynamic_reason",
+      "exact_contiguous_text": "the composition is close to M1 (Mo-Nb-Ti-V-Zr) which measured 3176 MPa.",
+      "character_start_zero_based": 282,
+      "character_end_exclusive": 353,
+      "omitted_before": true,
+      "omitted_after": true,
+      "display_with_omission_markers": "… the composition is close to M1 (Mo-Nb-Ti-V-Zr) which measured 3176 MPa. …",
+      "verbatim_verified": true
+    },
+    {
+      "id": "composition_comparison",
+      "source_field": "dynamic_reason",
+      "exact_contiguous_text": "The candidate has slightly higher Mo and Zr and lower V than M1, which may increase lattice distortion and strength, but also risks forming brittle intermetallics that could reduce UTS.",
+      "character_start_zero_based": 354,
+      "character_end_exclusive": 539,
+      "omitted_before": true,
+      "omitted_after": true,
+      "display_with_omission_markers": "… The candidate has slightly higher Mo and Zr and lower V than M1, which may increase lattice distortion and strength, but also risks forming brittle intermetallics that could reduce UTS. …",
+      "verbatim_verified": true
+    },
+    {
+      "id": "retained_underestimate",
+      "source_field": "dynamic_reason",
+      "exact_contiguous_text": "It should rank between M1 (3176) and the best anchors (3673), but not exceed them",
+      "character_start_zero_based": 540,
+      "character_end_exclusive": 621,
+      "omitted_before": true,
+      "omitted_after": true,
+      "display_with_omission_markers": "… It should rank between M1 (3176) and the best anchors (3673), but not exceed them …",
+      "verbatim_verified": true
+    },
+    {
+      "id": "final_ordinal_judgment",
+      "source_field": "dynamic_reason",
+      "exact_contiguous_text": "Thus, s_target_raw=88, slightly below the best anchors but above M1.",
+      "character_start_zero_based": 769,
+      "character_end_exclusive": 837,
+      "omitted_before": true,
+      "omitted_after": false,
+      "display_with_omission_markers": "… Thus, s_target_raw=88, slightly below the best anchors but above M1.",
+      "verbatim_verified": true
+    }
+  ],
+  "interpretation_limits": [
+    "Use initial static judgment versus batch-5 feedback-conditioned judgment, not two LLM judgments in batches 4 and 5. Batch 4 measured the reference; candidate c131 was first dynamically assessed in batch 5.",
+    "M1 is newly established in batch 5 and is outside the current shared anchors. This particular case does not demonstrate persistence across multiple candidate reassessments.",
+    "The LLM still placed c131 below the best anchors at approximately 3673 MPa; the observed 3929 MPa exceeded this expectation. Do not claim exact prediction of the optimum.",
+    "The case links measured context, reference selection, rescoring and a subsequent query. It does not independently establish a causal effect of M1, an anchor, or a particular shortlisting component.",
+    "Metallurgical statements in the archived LLM output are model hypotheses, not independently validated mechanisms. Preserve their uncertainty and do not replace quotations with author-written explanations.",
+    "Knowledge rank 187 to 4 is a same-state comparison, while normalized score 0.72 to 0.88 compares initial static and first dynamic judgments.",
+    "Do not mix run6 candidate14/candidate357 examples into the explanation of run7."
+  ],
+  "scores_and_ranks": {
+    "static_normalized_score": 0.72,
+    "dynamic_normalized_score": 0.88,
+    "static_reason_score_text": 72,
+    "dynamic_reason_score_text": 88,
+    "score_meaning": "Ordinal knowledge score, not a calibrated strength prediction or probability",
+    "same_state_static_rank": 187,
+    "same_state_dynamic_rank": 4,
+    "rank_denominator": 297,
+    "rank_interpretation": "Static versus updated knowledge order in the same batch-5 remaining pool; not final fused acquisition rank and not a comparison of two successive rounds.",
+    "shortlist_size": 75,
+    "shortlist_entry_route": "Not isolated by this extraction; do not assert a specific UCB/mean/uncertainty/random entry route."
+  },
+  "acquisition": {
+    "static_rank_lower_bound": 19,
+    "updated_rank": 7,
+    "query_slots": 7,
+    "comparison": "Same model, observed set, candidate pool and knowledge weight."
+  }
+}

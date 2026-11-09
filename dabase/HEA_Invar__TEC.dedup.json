@@ -1,0 +1,92 @@
+{
+  "deduplication_version": "hea_invar_composition_only_physical_dedup_v1",
+  "source_dataset_id": "rao_science_2022_invar_database_v1",
+  "source_file": "external_datasets/_staging/hea_invar/Data_base.xlsx",
+  "source_sha256": "e85735dd9d240286333d1fa1008c09ea7ed8a8ddaacb678c8f2973d55f5f558c",
+  "processed_file": "HEA_Invar__TEC.csv",
+  "processed_sha256": "117394c7a4385db7f932ff28cd05d65641eff82179aa27c83edf5210c27e2c28",
+  "provenance_file": "external_datasets/provenance/HEA_Invar__TEC__with_provenance.csv",
+  "provenance_sha256": "bcfd47cb77c591ac9584ba2d3e78609661953eab02391b06d1e7c80e4470f584",
+  "duplicate_audit_file": "external_datasets/provenance/HEA_Invar__TEC__duplicate_groups.csv",
+  "duplicate_audit_sha256": "88aa9cdca9fabb961eb7246dc40b475d6f9619797dc28734b95e5f6925908ba7",
+  "candidate_key_columns": [
+    "Fe",
+    "Ni",
+    "Co",
+    "Cr",
+    "V",
+    "Cu"
+  ],
+  "aggregated_response_columns": [
+    "TEC_1e-6_K-1"
+  ],
+  "target_aggregation": "median_ignore_missing",
+  "candidate_order": "first_source_occurrence",
+  "numeric_key_rounding_decimals": 12,
+  "composition_unit": "at.%",
+  "composition_missing_policy": "complete_composition_required_v1",
+  "composition_unit_normalization": "source_fraction_times_100_no_renormalization",
+  "composition_closure_audit": {
+    "sum_range": [
+      95.0,
+      105.0
+    ],
+    "minimum_after_exclusion": 99.97079200329232,
+    "maximum_after_exclusion": 100.10000000000001
+  },
+  "processed_table_policy": "composition_only_formal_raw_extension",
+  "metadata_policy": "source labels descriptors calculations and lineage moved to provenance",
+  "n_source_rows": 717,
+  "n_unique_rows": 709,
+  "n_rows_collapsed": 8,
+  "n_duplicate_groups": 8,
+  "n_rows_in_duplicate_groups": 16,
+  "max_duplicate_group_size": 2,
+  "target_conflict_groups": {
+    "TEC_1e-6_K-1": 1
+  },
+  "source_duplicate_conflict_groups": {
+    "TEC": 1,
+    "TC": 5,
+    "MS": 5,
+    "MagS": 0
+  },
+  "target_valid_rows": {
+    "TEC_1e-6_K-1": 709
+  },
+  "target_minima": {
+    "TEC_1e-6_K-1": -1.07
+  },
+  "target_maxima": {
+    "TEC_1e-6_K-1": 23.2
+  },
+  "source_active_learning_rows": 18,
+  "source_active_learning_unique_compositions": 18,
+  "source_active_learning_novel_compositions_vs_prior_rows": 17,
+  "excluded_from_processed_data": [
+    "alloy/source series labels",
+    "VEC",
+    "AR1",
+    "AR2",
+    "PE",
+    "Density",
+    "TermalC",
+    "MP",
+    "FI",
+    "SI",
+    "TI",
+    "M",
+    "TC",
+    "MS",
+    "MagS",
+    "source active-learning round labels and row lineage"
+  ],
+  "physics_descriptor_policy": "Excluded from the formal raw representation; retained for a separate physics-feature custom ablation.",
+  "prior_active_learning_policy": "All source rows remain in the retrospective pool, while round labels are retained only in provenance for sensitivity analysis.",
+  "license": "not_declared_in_source_repository",
+  "source_url": "https://github.com/ziyuanrao11/Machine-learning-enabled-high-entropy-alloy-discovery",
+  "source_doi": "10.1126/science.abo4940",
+  "tasks": [
+    "HEA_Invar__TEC"
+  ]
+}
