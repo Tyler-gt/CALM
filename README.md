@@ -10,11 +10,13 @@ CALM combines a calibrated GPR/RFR/bootstrap-LightGBM/MLP ensemble with LLM-deri
 
 $$
 a(x)=(1-\lambda)\operatorname{rankpct}(UCB(x))+
-\lambda\operatorname{rankpct}(s_K(x)),\qquad
+\lambda\widetilde{R}^{K}(x),\qquad
 \lambda=\operatorname{clip}\left(0.6\max(\rho_{\mathrm{EW}},0),0,0.6\right).
 $$
 
-Inputs are raw compositions, available processing/testing conditions, categorical encodings and missingness indicators. The method uses X-only feature filtering, a standard 64→32→16 MLP and no retrieval augmentation.
+Here, $\widetilde{R}^{K}$ is the updated knowledge percentile rank. FSR reorders shortlisted candidates within their original static rank positions; candidates outside the shortlist retain their ranks.
+
+Inputs are raw compositions, available processing/testing conditions, categorical encodings and missingness indicators. X-only screening removes unusable or constant columns while protecting varying raw inputs from correlation-based removal. The shared MLP has a 64→32→16→1 GELU architecture with MC dropout. LLM scoring uses no retrieval augmentation.
 
 ## Installation
 
@@ -72,16 +74,16 @@ CALM_API_KEY=
 
 Set `CALM_LLM_MODEL` to a model ID available from your provider. The official `deepseek-flash` alias follows the provider's current model version and differs from the paper's recorded deployment. Other providers must support OpenAI-compatible chat completions with JSON-object responses. Shell variables override `.env`; configuration uses the `CALM_*` variables. Reproducing the bundled paper figures requires no API access.
 
-## Run the paper comparisons
+## Run the benchmark
 
-Start with one paired run, or use all ten paper runs:
+For a selected task, run one or all ten paired repetitions using the recorded paper seeds:
 
 ```bash
 python run.py --dataset 2xxx_T6__UTS --n-runs 1
 python run.py --dataset 2xxx_T6__UTS
 ```
 
-Both commands perform remote LLM scoring and may incur API charges. The default main comparison includes **CALM and eight baselines**: Random, GPR-UCB, RFR-UCB, GBDT-UCB, NN-UCB, Adaptive-UCB, LLM-rank and LLM-dynamic. To include CALM-static, as in the supplementary comparison:
+New runs use remote LLM scoring and may incur API charges. The default main comparison includes **CALM and eight baselines**: Random, GPR-UCB, RFR-UCB, GBDT-UCB, NN-UCB, Adaptive-UCB, LLM-rank and LLM-dynamic. To include CALM-static, as in the supplementary comparison:
 
 ```bash
 python run.py --dataset 2xxx_T6__UTS --experiment supplementary
@@ -110,7 +112,7 @@ The actual per-run seeds are listed below in paper-run order and defined in [`ca
 
 ## Module ablations
 
-Use `--experiment` to run one of the five configurations in the paper:
+Use `--experiment` to run a single CALM configuration from the five-way paper ablation:
 
 | Value | FSR | Knowledge weighting |
 |---|---|---|
@@ -134,8 +136,8 @@ The eight bundled CSVs support all nine tasks in the manuscript.
 | Task ID | Property | Direction | Candidates |
 |---|---|---|---:|
 | `Cu_alloys__EC` | Electrical conductivity | Maximize | 1486 |
-| `HEA_Invar__TEC` | Thermal expansion | Minimize | 709 |
-| `MPEA__UTS` | Ultimate strength | Maximize | 362 |
+| `HEA_Invar__TEC` | Thermal expansion coefficient | Minimize | 709 |
+| `MPEA__UTS` | Ultimate tensile strength | Maximize | 362 |
 | `mg_alloy__UTS` | Ultimate tensile strength | Maximize | 289 |
 | `Ti_alloy__YS` | Yield strength | Maximize | 248 |
 | `Ti_alloy__UTS` | Ultimate tensile strength | Maximize | 185 |
@@ -143,15 +145,15 @@ The eight bundled CSVs support all nine tasks in the manuscript.
 | `2xxx_T6__EL` | Elongation | Maximize | 134 |
 | `2xxx_T6__UTS` | Ultimate tensile strength | Maximize | 138 |
 
-See [DATA_SOURCES.md](DATA_SOURCES.md) for sources, composition units and preparation. Unknown inputs remain missing, and all target/auxiliary-property columns are excluded from model and LLM inputs. Al UTS and EL share one table.
+See [DATA_SOURCES.md](DATA_SOURCES.md) for sources, composition units and preparation. Missing values remain explicit in source tables and LLM inputs; numerical surrogate inputs use median imputation and missingness indicators. All target/auxiliary-property columns are excluded from model and LLM inputs. Al UTS and EL share one table.
 
-For another dataset, register a `DatasetConfig` in [`calm/runner.py`](calm/runner.py) with `data_path` pointing to a prepared CSV, and use an explicit `--seed` for new runs. Supply a deduplicated CSV in its documented composition unit and matching column/deduplication records with recalculated hashes and row counts; see the [Al CSV](dabase/curated/al_alloys.csv), [column definitions](dabase/curated/al_alloys.columns.json) and [deduplication record](dabase/curated/al_alloys.dedup.json). Set the target, direction, composition unit and auxiliary-property exclusions explicitly; use `REPORTED_COMPOSITION_POLICY` when composition fields are unreported.
+For another dataset, register a `DatasetConfig` in [`calm/runner.py`](calm/runner.py) with `data_path` pointing to a prepared CSV, and use an explicit `--seed` for new runs. Supply a deduplicated CSV in its documented composition unit plus both `.columns.json` and `.dedup.json` records with matching hashes and row counts; see the [Al CSV](dabase/curated/al_alloys.csv), [column definitions](dabase/curated/al_alloys.columns.json) and [deduplication record](dabase/curated/al_alloys.dedup.json). Set `expected_target_valid_rows`, the target, direction, composition unit and auxiliary-property exclusions explicitly; use `REPORTED_COMPOSITION_POLICY` when composition fields are unreported.
 
-Missing or inconsistent column records stop the run before API calls; they are never regenerated during a benchmark. Direct users of `LLMReviewer` must also supply `element_cols` and `process_cols` explicitly; `process_cols=[]` is valid.
+Both data records are required and validated before API calls. Direct users of `LLMReviewer` must also supply `element_cols` and `process_cols` explicitly; `process_cols=[]` is valid.
 
 ## Outputs and code
 
-Default results go to `outputs/calm_paper_v1/<dataset>/`; other experiments and overrides use a separate `_custom/<hash>/<dataset>/` directory. Static knowledge scores are shared across comparisons under `outputs/calm_paper_v1/_static/`. Resume requires matching code, data, configuration and the same static scoring generation.
+Default results go to `outputs/calm_paper_v1/<dataset>/`; other experiments and overrides use `outputs/calm_paper_v1/_custom/<hash>/<dataset>/`. Static knowledge scores are shared across comparisons under `outputs/calm_paper_v1/_static/`. Resume requires matching code, environment, data, configuration and the same static scoring generation.
 
 Repeating a completed run preserves its results. Existing outputs from older code are also preserved and cannot be resumed with a different implementation. For an independent rerun with a fresh static-scoring cache, choose a new root:
 
