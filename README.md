@@ -91,7 +91,7 @@ python run.py --dataset 2xxx_T6__UTS --experiment supplementary
 
 Initialization uses 10% of the candidate pool, batches use 2%, and the total measurement budget is 40%, including initialization. Counts follow the paper's rounding rules and the final batch is truncated. Strategies share initial sets, inputs and measurement schedules, then learn from their own observations.
 
-The actual per-run seeds are listed below in paper-run order and defined in [`calm/benchmark.py`](calm/benchmark.py). `--n-runs` uses the first requested entries; `--seed <value>` generates a new paired experiment. Run provenance is documented in [`results/README.md`](results/README.md). Fresh API responses and the revised implementation can produce different trajectories; use the bundled results to reproduce the manuscript figures.
+The runner directly uses the actual per-run seed lists in [`calm/benchmark.py`](calm/benchmark.py), in the order shown below. `--n-runs` uses the first requested entries; `--seed <value>` generates a new paired experiment. Run provenance is documented in [`results/README.md`](results/README.md). Fresh API responses and the revised implementation can produce different trajectories; use the bundled results to reproduce the manuscript figures.
 
 <details>
 <summary>Actual seeds used in the paper runs</summary>

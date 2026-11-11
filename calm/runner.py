@@ -70,7 +70,7 @@ from calm.experiment import (
     SURROGATE_POLICY_VERSION,
     resolve_resource_allocation,
 )
-from calm.benchmark import PAPER_RUNS, paired_seeds
+from calm.benchmark import paired_seeds
 from calm.file_lock import exclusive_file_lock
 from calm.metrics import compute_stats
 from calm.plot import plot_convergence
@@ -1612,8 +1612,6 @@ def run_dataset(config: DatasetConfig) -> None:
 
 def _run_dataset_locked(config: DatasetConfig) -> None:
     paired_run_seeds = paired_seeds(config.name, N_RUNS, seed=SEED)
-    run_sources = (PAPER_RUNS[config.name]["source_run_numbers"][:N_RUNS]
-                   if SEED is None else None)
     if not config.data_path.is_file():
         raise FileNotFoundError(
             f"Dataset {config.name} requires {config.data_path}. "
@@ -2007,7 +2005,6 @@ def _run_dataset_locked(config: DatasetConfig) -> None:
         **reproducibility_config,
         "seed": SEED, "dataset": config.name,
         "paired_run_seeds": paired_run_seeds,
-        "paper_run_sources": run_sources,
         "experiment": EXPERIMENT_MODE,
         "fixed_lambda": FIXED_LAMBDA,
         "target_col": config.target_col,
@@ -2291,7 +2288,6 @@ def _run_dataset_locked(config: DatasetConfig) -> None:
             **reproducibility_config,
             "seed": SEED,
             "paired_run_seeds": paired_run_seeds,
-            "paper_run_sources": run_sources,
             "experiment": EXPERIMENT_MODE,
             "fixed_lambda": FIXED_LAMBDA,
             "target_cols": property_cols,
