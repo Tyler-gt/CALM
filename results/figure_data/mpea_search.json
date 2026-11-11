@@ -3146,7 +3146,7 @@
     }
   },
   "limitations": [
-    "Post-hoc illustrative case, not a representative effect estimate",
+    "Illustrative case, not a representative effect estimate",
     "Centroids summarize simultaneous batches, not individual candidate order",
     "PCA proximity does not establish metallurgical similarity or a causal mechanism",
     "No same-state knowledge-removal counterfactual or complete M1 evidence re-audit"

@@ -1,6 +1,6 @@
 # Frozen figure inputs
 
-These compact extracts supplement the complete paired benchmark and ablation results in the parent directory. They reproduce the figures and tables in the final manuscript and its English supplementary Sections S15-S17 without API requests, model training or research-archive files.
+These compact extracts supplement the complete paired benchmark and ablation results in the parent directory. They reproduce the figures and tables in the final manuscript and its English supplementary Sections S15-S17 without API requests or model training.
 
 From the repository root, install the lightweight plotting dependencies and run:
 
@@ -25,6 +25,6 @@ The command writes main Figures 1-9, supplementary Figures S18-S22, Tables 1-2, 
 
 Main Figures 3-4 compare nine strategies; supplementary Figures S19-S20 also include CALM-static. The benchmark and ablation files are the numerical source of their panels and tables, rather than another copy of precomputed plot arrays. Figure 9 recomputes selection changes from the actual and preceding-weight selected candidate sets.
 
-The quantitative figures are portable Matplotlib redraws of the final manuscript revisions. They preserve the selected data, panels, comparisons and scientific content; the bundled DejaVu font, annotation placement and simplified Figure 7 cards can differ from the publication artwork. The PCA coordinates in Figures 8 and S21 are frozen from the original analysis, not refitted. The model rationale excerpts in Figure 7 are historical judgments; they are not measured outcomes or independently verified physical explanations.
+The quantitative figures are portable Matplotlib redraws of the final manuscript revisions. They preserve the data, panels, comparisons and scientific content; the bundled DejaVu font, annotation placement and simplified Figure 7 cards can differ from the publication artwork. The PCA coordinates in Figures 8 and S21 are fixed rather than refitted. The model rationale excerpts in Figure 7 are model-generated judgments; they are not measured outcomes or independently verified physical explanations.
 
-`sources.json` records the original source and published extract SHA-256 hashes. Its `research/` and `manuscript_workspace/` paths identify the author archive and are not runtime dependencies. The extracts omit caches, complete prompt/evidence logs and local report paths. Dataset rights and attribution remain as described in [`DATA_SOURCES.md`](../../DATA_SOURCES.md); reproducing a numerical figure does not change the terms of its source data.
+`sources.json` records SHA-256 hashes for the figure inputs. All files needed for plotting are included in this repository. The extracts omit caches, complete prompt/evidence logs and local report paths. Dataset rights and attribution remain as described in [`DATA_SOURCES.md`](../../DATA_SOURCES.md); reproducing a numerical figure does not change the terms of its source data.

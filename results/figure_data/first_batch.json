@@ -1,5 +1,4 @@
 {
-  "analysis_role": "exploratory descriptive; unchanged frozen cohort",
   "metric": "Fraction of new acquisitions belonging to the top q% of the full candidate pool; initial samples excluded from numerator and denominator",
   "cutoff": "Direction-aware kth best target, k=ceil(q*N); include all candidates tied at cutoff",
   "weighting": "Average retained runs within each task, then equally average all nine tasks; do not pool the 83 filtered runs with unequal task weights",

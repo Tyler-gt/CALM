@@ -8,7 +8,6 @@
     "composition_unit": "at.%",
     "target_semantics": "The registered UTS field contains mixed tension/compression records; this candidate and M1 are both compression records. Do not relabel this observation as a new tensile test."
   },
-  "selection_role": "Post-hoc explanatory process case restricted to the existing final manuscript cohort.",
   "candidate": {
     "candidate_index_zero_based": 131,
     "composition_at_percent": {

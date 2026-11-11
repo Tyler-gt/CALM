@@ -1,5 +1,5 @@
 {
-  "purpose": "Frozen numeric inputs for the current manuscript figures. Historical paths identify sources; reproduction does not access them.",
+  "purpose": "Numeric inputs for reproducing the manuscript figures.",
   "files": [
     {
       "file": "knowledge_ranks.csv",
@@ -14,7 +14,7 @@
     },
     {
       "file": "mpea_case.json",
-      "sha256": "88ee4135a7df3da7d40095134cf012f0864448404184b440ad8d94e12aed27ed",
+      "sha256": "8fa8c7fb8cd7298989bf5fe0df277c8ed8005856ce592de7380853c3631df174",
       "description": "Figure 7: measured compositions, rationale excerpts and same-state ranks.",
       "sources": [
         {
@@ -29,7 +29,7 @@
     },
     {
       "file": "mpea_search.json",
-      "sha256": "92032b1246dfdc31a07c740898a6cb33f1e9001e6f4e220dbed04b2dd712b0f2",
+      "sha256": "2afe1f22cc113ab42380faf6cbfd92971b934d538ced81df16659d83be67da6f",
       "description": "Figures 8/S21: fixed PCA coordinates and complete paired run-7 searches.",
       "sources": [
         {
@@ -62,7 +62,7 @@
     },
     {
       "file": "first_batch.json",
-      "sha256": "a0abaf78bd9970cccccd530f8c2d7df5470c145454a55b2b30d73198fb1eefb2",
+      "sha256": "d1644cb14cba3fadd68e845a2dcee9efe5cffa9e655453facb0e5187f8949f1b",
       "description": "Figure S18 and Tables S15.1-3: all 90 paired runs and the 83-run sensitivity cohort.",
       "sources": [
         {
@@ -73,7 +73,7 @@
     },
     {
       "file": "knowledge_reliability.json",
-      "sha256": "d99c6342036f96ac99048dee10b4d5304fb000e3edccdbee10319b9e1b6b5186",
+      "sha256": "b739382558d068f1360b10d27b2f7dcc686bdcc93244b653d9054e794eef1859",
       "description": "Figure S22: 218 states from 55 runs; task-balanced agreement errors.",
       "sources": [
         {

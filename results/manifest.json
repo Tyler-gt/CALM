@@ -4,14 +4,12 @@
     "source_path": "paper/final/latex/CALM_English_Manuscript.tex",
     "sha256": "9f3022f23df6e2472b1b31064c993af3a5632c45dc0fba0645282f8827ab4801"
   },
-  "selection_role": "post_hoc_descriptive",
-  "confirmatory": false,
   "historical_strategy_display_names": {
     "Hybrid": "CALM",
     "Hybrid-static": "CALM-static"
   },
-  "path_convention": "Published paths are relative to the CALM repository root; source paths are relative to the author research archive.",
-  "numerical_preservation": "All numerical observations and array ordering in the selected nine-task benchmark and 450 module-ablation trajectories are preserved. Omitted historical summary blocks are listed separately; no original research file or experiment was changed.",
+  "path_convention": "Published file paths are relative to the CALM repository root.",
+  "numerical_preservation": "Numerical observations, actual seeds, candidate indices and array ordering in the nine-task benchmark and 450 module-ablation trajectories are preserved.",
   "verification": {
     "benchmark_tasks": 9,
     "benchmark_strategy_runs": 900,
@@ -32,7 +30,7 @@
       "published_bytes": 1767784,
       "transformations": [
         "Compact JSON serialization; all numeric values and array order preserved.",
-        "Machine-specific paths normalized to research_archive-relative provenance identifiers."
+        "Portable file references."
       ]
     },
     {
@@ -55,7 +53,7 @@
       "published_bytes": 1721122,
       "transformations": [
         "Compact JSON serialization; all numeric values and array order preserved.",
-        "Machine-specific paths normalized to research_archive-relative provenance identifiers."
+        "Portable file references."
       ]
     },
     {
@@ -73,12 +71,11 @@
       "path": "results/benchmark/MPEA__UTS/convergence.json",
       "source_path": "final_results/tasks/MPEA_UTS/convergence.json",
       "source_sha256": "a08247594e306d45df3cc23710b958e511e0f04f1005a7a422f9a089a9a8f06c",
-      "published_sha256": "a14cb5336bcb3c2b442aa9a05b8d5545dee196ce9981d856c1a823a76bb244ba",
+      "published_sha256": "a96912c423c334a595a7740b230ac19b51d2d4aea315311f89ae1f7789d25a56",
       "source_bytes": 2726195,
-      "published_bytes": 1577497,
+      "published_bytes": 1576926,
       "transformations": [
-        "Compact JSON serialization; all numeric values and array order preserved.",
-        "Machine-specific paths normalized to research_archive-relative provenance identifiers."
+        "Explanatory metadata streamlined; numerical observations, seeds and candidate-index ordering preserved."
       ]
     },
     {
@@ -101,7 +98,7 @@
       "published_bytes": 1455513,
       "transformations": [
         "Compact JSON serialization; all numeric values and array order preserved.",
-        "Machine-specific paths normalized to research_archive-relative provenance identifiers."
+        "Portable file references."
       ]
     },
     {
@@ -124,7 +121,7 @@
       "published_bytes": 1395725,
       "transformations": [
         "Compact JSON serialization; all numeric values and array order preserved.",
-        "Machine-specific paths normalized to research_archive-relative provenance identifiers."
+        "Portable file references."
       ]
     },
     {
@@ -147,7 +144,7 @@
       "published_bytes": 1206351,
       "transformations": [
         "Compact JSON serialization; all numeric values and array order preserved.",
-        "Machine-specific paths normalized to research_archive-relative provenance identifiers."
+        "Portable file references."
       ]
     },
     {
@@ -165,12 +162,11 @@
       "path": "results/benchmark/mg_alloy__YS/convergence.json",
       "source_path": "final_results/tasks/Mg_YS/convergence.json",
       "source_sha256": "4921f7e2b1fc43eb8e6ffb533f7c71c013e653c3bf3c0486d8993a70b5ebc862",
-      "published_sha256": "57e0e0f4c653c026e95586c05a80c8d7bb02c1d56745289e7fb03eda32a3958a",
+      "published_sha256": "8b933f69ed99fde548a10d434614697f81c16c188d27e8747c4bb1c3a3a998f7",
       "source_bytes": 2488459,
-      "published_bytes": 1457067,
+      "published_bytes": 1456249,
       "transformations": [
-        "Compact JSON serialization; all numeric values and array order preserved.",
-        "Machine-specific paths normalized to research_archive-relative provenance identifiers."
+        "Explanatory metadata streamlined; numerical observations, seeds and candidate-index ordering preserved."
       ]
     },
     {
@@ -193,7 +189,7 @@
       "published_bytes": 1100375,
       "transformations": [
         "Compact JSON serialization; all numeric values and array order preserved.",
-        "Machine-specific paths normalized to research_archive-relative provenance identifiers."
+        "Portable file references."
       ]
     },
     {
@@ -211,12 +207,11 @@
       "path": "results/benchmark/2xxx_T6__UTS/convergence.json",
       "source_path": "final_results/tasks/Al_UTS/convergence.json",
       "source_sha256": "c74fd8d48a4fd26b65d28b9e1ab1a7cda733bfa8e66839780380c24277b99bbb",
-      "published_sha256": "b79d5093dc2affbdecdf4f126d85d69d5e4d7fdcc3d929025783f39a5685ca83",
+      "published_sha256": "62184d10556cbd5db16de6fe68d0bd2f180fc8388184ee10ba47c97670d22340",
       "source_bytes": 1811012,
-      "published_bytes": 1089332,
+      "published_bytes": 1089123,
       "transformations": [
-        "Compact JSON serialization; all numeric values and array order preserved.",
-        "Machine-specific paths normalized to research_archive-relative provenance identifiers."
+        "Explanatory metadata streamlined; numerical observations, seeds and candidate-index ordering preserved."
       ]
     },
     {
@@ -234,27 +229,23 @@
       "path": "results/benchmark/summary.json",
       "source_path": "paper/calm_results_final.json",
       "source_sha256": "22b9c3dd7153d4f3a731e4defe889ad7c650aa63b408ed6e94ef76b9e4e71605",
-      "published_sha256": "33b1eed3ffbb80b9f2d8ef30fd7751fddfae4d86c3f0f50794017e12a20efd81",
+      "published_sha256": "a2e526bca4021e15136ced793dcaed1609f900672b36a08124565f8b3b1748d6",
       "source_bytes": 184991,
-      "published_bytes": 54839,
+      "published_bytes": 52984,
       "transformations": [
-        "Current nine-task cohort metrics, task order, selected run identities and per-strategy numerical summaries preserved. Superseded sensitivity snapshots and unused legacy inferential summaries omitted from this publication view.",
-        "Chinese selection notes and labels replaced by equivalent concise English descriptions.",
-        "Main task file references/hashes point to packaged results; original identities retained.",
-        "Machine paths normalized; historical source-package hash explicitly labeled."
+        "Task order, run identities, actual seeds and numerical summaries preserved.",
+        "Task file references and hashes identify the bundled results."
       ]
     },
     {
       "path": "results/ablations.json",
       "source_path": "analysis/outputs/ablation_complete_20261027/results.json",
       "source_sha256": "7c9263faaadbf17dcb863f9399a070f622010e4b15489603dac6a08c46267fcd",
-      "published_sha256": "72f8ae20927e413a3e04ce93e1e0c135563a5d0fa35ce7731e3a0615c20558bd",
+      "published_sha256": "07c5a529a3bd3f21c693cbca187a389bb0db0f56e569e7238dd64544d1ed4070",
       "source_bytes": 2413494,
-      "published_bytes": 1460046,
+      "published_bytes": 1459841,
       "transformations": [
-        "All 450 per-run measurements, 7150 curve records, comparisons and numerical summaries preserved.",
-        "Omitted 1289 internal source-hash entries and per-run internal source paths; aggregate hash retained.",
-        "Main-cohort references point to packaged benchmark trajectories."
+        "Explanatory metadata streamlined; numerical observations, seeds and candidate-index ordering preserved."
       ]
     }
   ],
@@ -272,6 +263,6 @@
       "holm6",
       "component_contrasts"
     ],
-    "reason": "These superseded sensitivity/status snapshots and legacy inferential summaries are outside the current manuscript figure/table reproduction scope. The current selected-cohort trajectories, descriptive metrics, ranks, seeds and run replacements are retained. Original source files remain unchanged under their recorded hashes."
+    "reason": "The package contains the benchmark and module-ablation inputs required for the manuscript figures and tables."
   }
 }

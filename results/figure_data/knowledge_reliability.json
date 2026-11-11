@@ -1,5 +1,5 @@
 {
-  "analysis_role": "Post hoc exploratory descriptive diagnostic; no significance testing",
+  "analysis_role": "Knowledge-reliability diagnostic; no significance testing.",
   "primary_target": "Gamma=2 weighted rank correlation of current post-FSR knowledge ranks and utility on the entire unmeasured pool",
   "control_target": "Ordinary Spearman on the same unmeasured pool",
   "estimators": "Archived observed-set pre-update EWRC and ordinary Spearman from the same CALM state",
