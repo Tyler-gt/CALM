@@ -1,0 +1,62 @@
+{
+  "title": "Supplementary Data S1 Candidate-level static knowledge scores",
+  "candidate_count": 3849,
+  "original_json_files_unchanged": true,
+  "files": [
+    {
+      "file": "Al_EL_static_scores.json",
+      "sha256": "7ad4569a450b37f849dfba5384826e35ec558315503c8f8f206e10f35b4ac2f9",
+      "bytes": 22067
+    },
+    {
+      "file": "Al_UTS_static_scores.json",
+      "sha256": "44ded9b2821b53098ee38f27a819bee2969b395aad44b71e693e3dc365c502ec",
+      "bytes": 22699
+    },
+    {
+      "file": "Cu_EC_static_scores.json",
+      "sha256": "0c2a8bf02ba7206e5ba7e0fbcc9187c6f964095ce93182d3a400569d75de366e",
+      "bytes": 221907
+    },
+    {
+      "file": "HEA_Invar_TEC_static_scores.json",
+      "sha256": "e9dc974b578adf963e4e1809fb32ae57225706f344f97fe2abac62fe291a6509",
+      "bytes": 106578
+    },
+    {
+      "file": "Mg_UTS_static_scores.json",
+      "sha256": "7b3683cce07e5583d49d9508643e715194167d0f609217863782d1938a4b6266",
+      "bytes": 44859
+    },
+    {
+      "file": "Mg_YS_static_scores.json",
+      "sha256": "e0324a707378594f90fad9af8d2807f95d086f754aaf1cc859b2a10cb969d3c6",
+      "bytes": 46167
+    },
+    {
+      "file": "MPEA_UTS_static_scores.json",
+      "sha256": "2f6d50003f4ac266e493c641cdfbdcbda6610fd64ba4f9db026366c310ba29da",
+      "bytes": 55687
+    },
+    {
+      "file": "README.md",
+      "sha256": "d189040294bc5c7b5bec9c8b3aa984e911eb62ecff3a2a551e487c4f1af24142",
+      "bytes": 4140
+    },
+    {
+      "file": "static_scores_manifest.json",
+      "sha256": "b8621b4b80c4abd54d965af9b507f8adc4e8d4744704390840f574b8a976a78c",
+      "bytes": 14382
+    },
+    {
+      "file": "Ti_UTS_static_scores.json",
+      "sha256": "6cbad77b083aa92870e9d0b62049b0e045a59afc3d08d91e3b929146551c65d8",
+      "bytes": 29569
+    },
+    {
+      "file": "Ti_YS_static_scores.json",
+      "sha256": "6764b3fcd2fc1a72c240c1284617f7d98b507522ced325069d0ccc5136e47c74",
+      "bytes": 38827
+    }
+  ]
+}

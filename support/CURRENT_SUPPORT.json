@@ -1,0 +1,117 @@
+{
+  "revision": "2026-11-16",
+  "main_manuscript_changed": false,
+  "supplementary_pages": 40,
+  "detailed_methods_pages": 11,
+  "status": "aligned_to_final_manuscript_main_methods_integration_pending",
+  "package_note": "Publication documents and static scores preserve the reviewed source bytes; landing pages and inventory use repository paths.",
+  "documents": {
+    "supplementary_pdf": "CALM_Supplementary_Information_English.pdf",
+    "supplementary_word": "CALM_Supplementary_Information_English.docx",
+    "detailed_methods_word": "S14_Methods_en.docx",
+    "detailed_methods_pdf": "S14_Methods_en.pdf",
+    "static_scores": "Supplementary_Data_S1.zip"
+  },
+  "files": [
+    {
+      "path": "CALM_Supplementary_Information_English.docx",
+      "bytes": 8009379,
+      "sha256": "4a50a89bd0d638554c2c3f95f5b403d7d8d9f06adfc742db35c646ad4dfab97d"
+    },
+    {
+      "path": "CALM_Supplementary_Information_English.pdf",
+      "bytes": 5072241,
+      "sha256": "0f232347f019569b9d8e45d7f014c318e33358791528905dbb6ea427259a5334"
+    },
+    {
+      "path": "DATA_INDEX.md",
+      "bytes": 3991,
+      "sha256": "32387ce1e8da891d591ea1906fd2dcc474f58a2fa5f41ba9c2fb489a5e5aace3"
+    },
+    {
+      "path": "JOURNAL_FORMAT_NOTES.md",
+      "bytes": 1551,
+      "sha256": "c16f198d6a704a016bfe4b5e936c6781cb0706b189a169d9e6dd7335d11a9ef4"
+    },
+    {
+      "path": "README.md",
+      "bytes": 2152,
+      "sha256": "5d0ff3a5642221bda039a3ba8097c0dceb651f002584983275f4bcec9ad7f39b"
+    },
+    {
+      "path": "S14_Methods_en.docx",
+      "bytes": 4636211,
+      "sha256": "88a8ffc8dce6413acfae8fd7d9347eb1856f0b523cec0e30cdf3937e333c1f92"
+    },
+    {
+      "path": "S14_Methods_en.pdf",
+      "bytes": 277047,
+      "sha256": "a3f32c81c58aa542e0c570ea46e8efdc63451e1f4b0acd4ec8af416b22e07aab"
+    },
+    {
+      "path": "Supplementary_Data_S1/Al_EL_static_scores.json",
+      "bytes": 22067,
+      "sha256": "7ad4569a450b37f849dfba5384826e35ec558315503c8f8f206e10f35b4ac2f9"
+    },
+    {
+      "path": "Supplementary_Data_S1/Al_UTS_static_scores.json",
+      "bytes": 22699,
+      "sha256": "44ded9b2821b53098ee38f27a819bee2969b395aad44b71e693e3dc365c502ec"
+    },
+    {
+      "path": "Supplementary_Data_S1/Cu_EC_static_scores.json",
+      "bytes": 221907,
+      "sha256": "0c2a8bf02ba7206e5ba7e0fbcc9187c6f964095ce93182d3a400569d75de366e"
+    },
+    {
+      "path": "Supplementary_Data_S1/english_package_manifest.json",
+      "bytes": 1989,
+      "sha256": "165bdfd759fae7b8bb113c3c929cc83c5d4c11181967bf5cab04cb0475c40e6c"
+    },
+    {
+      "path": "Supplementary_Data_S1/HEA_Invar_TEC_static_scores.json",
+      "bytes": 106578,
+      "sha256": "e9dc974b578adf963e4e1809fb32ae57225706f344f97fe2abac62fe291a6509"
+    },
+    {
+      "path": "Supplementary_Data_S1/Mg_UTS_static_scores.json",
+      "bytes": 44859,
+      "sha256": "7b3683cce07e5583d49d9508643e715194167d0f609217863782d1938a4b6266"
+    },
+    {
+      "path": "Supplementary_Data_S1/Mg_YS_static_scores.json",
+      "bytes": 46167,
+      "sha256": "e0324a707378594f90fad9af8d2807f95d086f754aaf1cc859b2a10cb969d3c6"
+    },
+    {
+      "path": "Supplementary_Data_S1/MPEA_UTS_static_scores.json",
+      "bytes": 55687,
+      "sha256": "2f6d50003f4ac266e493c641cdfbdcbda6610fd64ba4f9db026366c310ba29da"
+    },
+    {
+      "path": "Supplementary_Data_S1/README.md",
+      "bytes": 4140,
+      "sha256": "d189040294bc5c7b5bec9c8b3aa984e911eb62ecff3a2a551e487c4f1af24142"
+    },
+    {
+      "path": "Supplementary_Data_S1/static_scores_manifest.json",
+      "bytes": 14382,
+      "sha256": "b8621b4b80c4abd54d965af9b507f8adc4e8d4744704390840f574b8a976a78c"
+    },
+    {
+      "path": "Supplementary_Data_S1/Ti_UTS_static_scores.json",
+      "bytes": 29569,
+      "sha256": "6cbad77b083aa92870e9d0b62049b0e045a59afc3d08d91e3b929146551c65d8"
+    },
+    {
+      "path": "Supplementary_Data_S1/Ti_YS_static_scores.json",
+      "bytes": 38827,
+      "sha256": "6764b3fcd2fc1a72c240c1284617f7d98b507522ced325069d0ccc5136e47c74"
+    },
+    {
+      "path": "Supplementary_Data_S1.zip",
+      "bytes": 52048,
+      "sha256": "423dfe3dd28fa4739dd709e7105976f7122f132b0a3c5d0ff47c2e15f72f96a5"
+    }
+  ]
+}

@@ -49,6 +49,10 @@ This setting applies to the current shell and runs MKL operations in single-thre
 
 </details>
 
+## Supplementary materials
+
+The revised English [Supplementary Information PDF](support/CALM_Supplementary_Information_English.pdf), [editable Word version](support/CALM_Supplementary_Information_English.docx), separate S14 Methods and Supplementary Data S1 are available in [support/](support/). [Download the complete package](support/CALM_English_Support_Package.zip) or use the [data index](support/DATA_INDEX.md) to locate the accompanying repository results.
+
 ## Reproduce the paper figures
 
 Prepared inputs for all nine tasks and the frozen results needed for the manuscript figures and tables are included. This workflow needs only NumPy, pandas and Matplotlib, without PyTorch, a GPU or API access:

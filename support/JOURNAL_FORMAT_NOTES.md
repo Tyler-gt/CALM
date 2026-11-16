@@ -1,0 +1,7 @@
+# Journal format and remaining integration step
+
+Target journal: npj Computational Materials. The journal's [submission guidelines](https://www.nature.com/npjcompumats/for-authors-and-referees/submission-guidelines) were consulted on 16 November 2026. They request a single merged Supplementary Information PDF, consistent language and terminology, clean files without tracked changes, and separately labelled Supplementary Data with a title and legend in the PDF. They also require methods to be reported in the main manuscript rather than in Supplementary Methods.
+
+The author explicitly requested that the existing main manuscript remain unchanged. Accordingly, Section S14 is translated as a separate Detailed Methods document, and the Supplementary Information file contains Sections S1–S13 and S15–S17. Existing section, figure and table numbers are retained to preserve the manuscript's cross-references. The current English package is not represented as fully compliant with the journal's final structural requirements: the necessary additional method details and their cross-references still need to be integrated into the main Methods before submission. Renaming or uploading the separate Methods file as Supplementary Information would not complete that step.
+
+The English text retains the source-run identities, numerical results, scientific qualifications and factual selection provenance. Original Chinese files and historical audit records remain in the parent support directory. They are not part of the English publication files.

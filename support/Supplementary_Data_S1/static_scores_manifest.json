@@ -1,0 +1,381 @@
+{
+  "schema_version": "support_static_scores_manifest_v1",
+  "export_date": "2026-11-16",
+  "snapshot": {
+    "path": "paper/calm_results_final.json",
+    "sha256": "22b9c3dd7153d4f3a731e4defe889ad7c650aa63b408ed6e94ef76b9e4e71605",
+    "bytes": 184991
+  },
+  "source_index": {
+    "path": "paper/support/DATA_INDEX.md",
+    "sha256": "cc84fe14932f00ddd39d093021de09fd97645c260c804e100ad9b022f10d6e32",
+    "bytes": 2882
+  },
+  "export_script": {
+    "path": "paper/scripts/export_support_static_scores_20261116.py",
+    "sha256": "20dd9caa00d5bbe5371dd7646532de6665895da38e865461a9c7afcf05b323c7",
+    "bytes": 10650
+  },
+  "selection_role": "post_hoc_descriptive",
+  "confirmatory": false,
+  "task_count": 9,
+  "candidate_count": 3849,
+  "score_fields": [
+    "s_phys",
+    "s_target_raw",
+    "s_general_plausibility_raw",
+    "s_phys_raw"
+  ],
+  "validation": {
+    "source_array_lengths_match_candidate_pools": true,
+    "candidate_indices_match_source_array_positions": true,
+    "score_numeric_tokens_preserved_exactly": true,
+    "task_metadata_matches_snapshot_and_archived_score_metadata": true,
+    "ranks_recomputed": false,
+    "llm_called": false
+  },
+  "tasks": [
+    {
+      "task_label": "Cu EC",
+      "task_id": "Cu_alloys__EC",
+      "file": "Cu_EC_static_scores.json",
+      "sha256": "0c2a8bf02ba7206e5ba7e0fbcc9187c6f964095ce93182d3a400569d75de366e",
+      "bytes": 221907,
+      "candidate_count": 1486,
+      "objective_direction": "maximize",
+      "composition_unit": "wt.%",
+      "target_unit": "%IACS",
+      "source_score_file": {
+        "path": "final_results/updates/cu_ec_final_20260921/tasks/Cu_EC/source/_llm_scores.json",
+        "sha256": "bd3f59f0950ecef610e28a21c9248d7a56741fd4bb7afc4a8b8945a201a2bc54",
+        "bytes": 39774
+      },
+      "source_config": {
+        "path": "final_results/updates/cu_ec_final_20260921/tasks/Cu_EC/config.json",
+        "sha256": "889c5c6909e526f21a5c0c942775bc6102caf218b4da7b11cdd0c311c6119d2d",
+        "bytes": 25338
+      },
+      "candidate_pool": {
+        "path": "final_results/updates/cu_ec_final_20260921/tasks/Cu_EC/data/candidate_pool.csv",
+        "sha256": "be694bb44801385520a8fe888b1a114e40f7931d88812c6437b378e12ad4dc58",
+        "bytes": 340573
+      },
+      "source_settings": {
+        "experiment_version": "sA_v33_objsrc_raw_mlp_anchor_memory_llmdynamic_ewrc_norag_dsv4pro_1kpertask_q4_b40_10r",
+        "seed": 42,
+        "n_samples": 1486,
+        "n_init": 149,
+        "batch_size": 30,
+        "total_budget": 595,
+        "feature_representation": "raw",
+        "llm_scoring_model": "deepseek-v4-flash-ascend",
+        "llm_scoring_temperature": 0.0,
+        "llm_retrieval_mode": "disabled"
+      }
+    },
+    {
+      "task_label": "HEA Invar TEC",
+      "task_id": "HEA_Invar__TEC",
+      "file": "HEA_Invar_TEC_static_scores.json",
+      "sha256": "e9dc974b578adf963e4e1809fb32ae57225706f344f97fe2abac62fe291a6509",
+      "bytes": 106578,
+      "candidate_count": 709,
+      "objective_direction": "minimize",
+      "composition_unit": "at.%",
+      "target_unit": "10^-6 K^-1",
+      "source_score_file": {
+        "path": "final_results/tasks/HEA_Invar_TEC/source/_llm_scores.json",
+        "sha256": "330c7b92a443a1d638493e658b94d09ba85a21aeeccb0ad07a44aefdf80b7592",
+        "bytes": 20489
+      },
+      "source_config": {
+        "path": "final_results/tasks/HEA_Invar_TEC/config.json",
+        "sha256": "53b714c54e97214984fb0b964b17cf6fc22f2aea01cfb30a86b302bf6a638efc",
+        "bytes": 23318
+      },
+      "candidate_pool": {
+        "path": "final_results/tasks/HEA_Invar_TEC/data/candidate_pool.csv",
+        "sha256": "9e1e1bfa9b67336784382def013dc4d37dc1f86d8389b7aec3d68cce89288f0c",
+        "bytes": 23977
+      },
+      "source_settings": {
+        "experiment_version": "sA_v34_objsrc_raw_mlp_anchor_memory_llmdynamic_ewrc_norag_dsv4pro_1kpertask_q6_b40_10r_heaext",
+        "seed": 42,
+        "n_samples": 709,
+        "n_init": 71,
+        "batch_size": 14,
+        "total_budget": 284,
+        "feature_representation": "raw",
+        "llm_scoring_model": "deepseek-v4-flash-ascend",
+        "llm_scoring_temperature": 0.0,
+        "llm_retrieval_mode": "disabled"
+      }
+    },
+    {
+      "task_label": "MPEA UTS",
+      "task_id": "MPEA__UTS",
+      "file": "MPEA_UTS_static_scores.json",
+      "sha256": "2f6d50003f4ac266e493c641cdfbdcbda6610fd64ba4f9db026366c310ba29da",
+      "bytes": 55687,
+      "candidate_count": 362,
+      "objective_direction": "maximize",
+      "composition_unit": "at.%",
+      "target_unit": "MPa",
+      "source_score_file": {
+        "path": "final_results/tasks/MPEA_UTS/source/_llm_scores.json",
+        "sha256": "51e7da75d4b27769c98dc9f7c4f6ea1e90dc756bed0686f0174b9e710f6e4bb3",
+        "bytes": 12790
+      },
+      "source_config": {
+        "path": "final_results/tasks/MPEA_UTS/config.json",
+        "sha256": "d7d136f53119dd8358cc43e74bc345a5bbd48ae0499132a0c4545fb37c72a78b",
+        "bytes": 26139
+      },
+      "candidate_pool": {
+        "path": "final_results/tasks/MPEA_UTS/data/candidate_pool.csv",
+        "sha256": "2eb643f6d48119dd70fe9c8bdead8b82f50dc325e2447af656d7d04458bb62b8",
+        "bytes": 208484
+      },
+      "source_settings": {
+        "experiment_version": "sA_v34_objsrc_raw_mlp_anchor_memory_llmdynamic_ewrc_norag_dsv4pro_1kpertask_q6_b40_10r_heaext",
+        "seed": 42,
+        "n_samples": 362,
+        "n_init": 37,
+        "batch_size": 7,
+        "total_budget": 145,
+        "feature_representation": "raw",
+        "llm_scoring_model": "deepseek-v4-flash-ascend",
+        "llm_scoring_temperature": 0.0,
+        "llm_retrieval_mode": "disabled"
+      }
+    },
+    {
+      "task_label": "Mg UTS",
+      "task_id": "mg_alloy__UTS",
+      "file": "Mg_UTS_static_scores.json",
+      "sha256": "7b3683cce07e5583d49d9508643e715194167d0f609217863782d1938a4b6266",
+      "bytes": 44859,
+      "candidate_count": 289,
+      "objective_direction": "maximize",
+      "composition_unit": "wt.%",
+      "target_unit": "MPa",
+      "source_score_file": {
+        "path": "final_results/tasks/Mg_UTS/source/_llm_scores.json",
+        "sha256": "f521f4c5a78050640aaa9da23438f77d197cf1dff3ecce27de940762ba427a97",
+        "bytes": 10896
+      },
+      "source_config": {
+        "path": "final_results/tasks/Mg_UTS/config.json",
+        "sha256": "7df716a3825d78147407ccde7e86efe6d1d33afbde48a752148b3a6f3ada2dcf",
+        "bytes": 24963
+      },
+      "candidate_pool": {
+        "path": "final_results/tasks/Mg_UTS/data/candidate_pool.csv",
+        "sha256": "d8095d9c9b82ce919b19bd2374c729786194b53b88a3e2fca64e1c25f8655191",
+        "bytes": 72757
+      },
+      "source_settings": {
+        "experiment_version": "sA_v33_objsrc_raw_mlp_anchor_memory_llmdynamic_ewrc_norag_dsv4pro_1kpertask_q4_b40_10r",
+        "seed": 20260902,
+        "n_samples": 289,
+        "n_init": 29,
+        "batch_size": 6,
+        "total_budget": 116,
+        "feature_representation": "raw",
+        "llm_scoring_model": "deepseek-v4-flash-ascend",
+        "llm_scoring_temperature": 0.0,
+        "llm_retrieval_mode": "disabled"
+      }
+    },
+    {
+      "task_label": "Ti YS",
+      "task_id": "Ti_alloy__YS",
+      "file": "Ti_YS_static_scores.json",
+      "sha256": "6764b3fcd2fc1a72c240c1284617f7d98b507522ced325069d0ccc5136e47c74",
+      "bytes": 38827,
+      "candidate_count": 248,
+      "objective_direction": "maximize",
+      "composition_unit": "at.%",
+      "target_unit": "MPa",
+      "source_score_file": {
+        "path": "final_results/tasks/Ti_YS/source/_llm_scores.json",
+        "sha256": "33cc2241cc9291d24e24d212f044d8a1282fc199f1ab12979dbfa895bf381669",
+        "bytes": 9748
+      },
+      "source_config": {
+        "path": "final_results/tasks/Ti_YS/config.json",
+        "sha256": "4a2da3dd0f8f014103b195ec31666e4fb14b6ffc19b2a574ac8d2d83c1e9cbb8",
+        "bytes": 24680
+      },
+      "candidate_pool": {
+        "path": "final_results/tasks/Ti_YS/data/candidate_pool.csv",
+        "sha256": "7ba5073a192c70da41dd0fd95f78e142554e2b0aa42d6ef4e34372d7dff9170f",
+        "bytes": 109166
+      },
+      "source_settings": {
+        "experiment_version": "sA_v33_objsrc_raw_mlp_anchor_memory_llmdynamic_ewrc_norag_dsv4pro_1kpertask_q4_b40_10r",
+        "seed": 42,
+        "n_samples": 248,
+        "n_init": 25,
+        "batch_size": 5,
+        "total_budget": 100,
+        "feature_representation": "raw",
+        "llm_scoring_model": "deepseek-v4-flash-ascend",
+        "llm_scoring_temperature": 0.0,
+        "llm_retrieval_mode": "disabled"
+      }
+    },
+    {
+      "task_label": "Ti UTS",
+      "task_id": "Ti_alloy__UTS",
+      "file": "Ti_UTS_static_scores.json",
+      "sha256": "6cbad77b083aa92870e9d0b62049b0e045a59afc3d08d91e3b929146551c65d8",
+      "bytes": 29569,
+      "candidate_count": 185,
+      "objective_direction": "maximize",
+      "composition_unit": "at.%",
+      "target_unit": "MPa",
+      "source_score_file": {
+        "path": "final_results/tasks/Ti_UTS/source/_llm_scores.json",
+        "sha256": "3bd317f64d5a93198324b6fd8fcfe7406bc28bcb40686f19c687b382c78440bd",
+        "bytes": 8237
+      },
+      "source_config": {
+        "path": "final_results/tasks/Ti_UTS/config.json",
+        "sha256": "7427f1b7803d65b29cfa13b4641b5beab21f37b23d0710c0a642ad682d8c3f4e",
+        "bytes": 24682
+      },
+      "candidate_pool": {
+        "path": "final_results/tasks/Ti_UTS/data/candidate_pool.csv",
+        "sha256": "239f002e01b8487faf6824c6f4c863ba90b5bfa32cd91bce7e84fdbb0c87b7d5",
+        "bytes": 82586
+      },
+      "source_settings": {
+        "experiment_version": "sA_v33_objsrc_raw_mlp_anchor_memory_llmdynamic_ewrc_norag_dsv4pro_1kpertask_q4_b40_10r",
+        "seed": 42,
+        "n_samples": 185,
+        "n_init": 19,
+        "batch_size": 4,
+        "total_budget": 74,
+        "feature_representation": "raw",
+        "llm_scoring_model": "deepseek-v4-flash-ascend",
+        "llm_scoring_temperature": 0.0,
+        "llm_retrieval_mode": "disabled"
+      }
+    },
+    {
+      "task_label": "Mg YS",
+      "task_id": "mg_alloy__YS",
+      "file": "Mg_YS_static_scores.json",
+      "sha256": "e0324a707378594f90fad9af8d2807f95d086f754aaf1cc859b2a10cb969d3c6",
+      "bytes": 46167,
+      "candidate_count": 298,
+      "objective_direction": "maximize",
+      "composition_unit": "wt.%",
+      "target_unit": "MPa",
+      "source_score_file": {
+        "path": "final_results/tasks/Mg_YS/source/_llm_scores.json",
+        "sha256": "fdc03c2380bef13e72912af594859c50041efa72f1ff323d27522741ce29464d",
+        "bytes": 11111
+      },
+      "source_config": {
+        "path": "final_results/tasks/Mg_YS/config.json",
+        "sha256": "88495123dc41b0cc55fce2ac80b31be9c6df68a5932f1de5e47f9bc5e8f894a9",
+        "bytes": 26027
+      },
+      "candidate_pool": {
+        "path": "final_results/tasks/Mg_YS/data/candidate_pool.csv",
+        "sha256": "a9e7bfe925849fb0f24fa647b567b9bf970d9ae7840850fe4258eb70abcc0276",
+        "bytes": 75015
+      },
+      "source_settings": {
+        "experiment_version": "sA_v33_objsrc_raw_mlp_anchor_memory_llmdynamic_ewrc_norag_dsv4pro_1kpertask_q4_b40_10r",
+        "seed": 42,
+        "n_samples": 298,
+        "n_init": 30,
+        "batch_size": 6,
+        "total_budget": 120,
+        "feature_representation": "raw",
+        "llm_scoring_model": "deepseek-v4-flash-ascend",
+        "llm_scoring_temperature": 0.0,
+        "llm_retrieval_mode": "disabled"
+      }
+    },
+    {
+      "task_label": "Al EL",
+      "task_id": "2xxx_T6__EL",
+      "file": "Al_EL_static_scores.json",
+      "sha256": "7ad4569a450b37f849dfba5384826e35ec558315503c8f8f206e10f35b4ac2f9",
+      "bytes": 22067,
+      "candidate_count": 134,
+      "objective_direction": "maximize",
+      "composition_unit": "wt.%",
+      "target_unit": "%",
+      "source_score_file": {
+        "path": "final_results/tasks/Al_EL/source/_llm_scores.json",
+        "sha256": "4da7dae9ec9146e12b926a903cc66cf585d26755ad87b9144044835ddd107dd9",
+        "bytes": 6872
+      },
+      "source_config": {
+        "path": "final_results/tasks/Al_EL/config.json",
+        "sha256": "a7b878af33be897574b1dfbdaeb8497aa47a4ce40a3978ae0a5d6bc585ead323",
+        "bytes": 24103
+      },
+      "candidate_pool": {
+        "path": "final_results/tasks/Al_EL/data/candidate_pool.csv",
+        "sha256": "2c80725c4310201c62696ac18355f65059af5c0164f4c8a1badc0be54758dda2",
+        "bytes": 17089
+      },
+      "source_settings": {
+        "experiment_version": "sA_v33_objsrc_raw_mlp_anchor_memory_llmdynamic_ewrc_norag_dsv4pro_1kpertask_q4_b40_10r",
+        "seed": 42,
+        "n_samples": 134,
+        "n_init": 14,
+        "batch_size": 3,
+        "total_budget": 54,
+        "feature_representation": "raw",
+        "llm_scoring_model": "deepseek-v4-flash-ascend",
+        "llm_scoring_temperature": 0.0,
+        "llm_retrieval_mode": "disabled"
+      }
+    },
+    {
+      "task_label": "Al UTS",
+      "task_id": "2xxx_T6__UTS",
+      "file": "Al_UTS_static_scores.json",
+      "sha256": "44ded9b2821b53098ee38f27a819bee2969b395aad44b71e693e3dc365c502ec",
+      "bytes": 22699,
+      "candidate_count": 138,
+      "objective_direction": "maximize",
+      "composition_unit": "wt.%",
+      "target_unit": "MPa",
+      "source_score_file": {
+        "path": "final_results/tasks/Al_UTS/source/_llm_scores.json",
+        "sha256": "02953b69d57e64372e414235152673051d615cbdd7b7502c99300fb08ad4780d",
+        "bytes": 6970
+      },
+      "source_config": {
+        "path": "final_results/tasks/Al_UTS/config.json",
+        "sha256": "f70e6caf40491d7ebd5794ca59a189e8d6be0932159e3d2b031ac8af7ec2e3a3",
+        "bytes": 25647
+      },
+      "candidate_pool": {
+        "path": "final_results/tasks/Al_UTS/data/candidate_pool.csv",
+        "sha256": "90d74d693c2810c9575021edee77057783cb7346985f4781ad00222eaa356d91",
+        "bytes": 17563
+      },
+      "source_settings": {
+        "experiment_version": "sA_v33_objsrc_raw_mlp_anchor_memory_llmdynamic_ewrc_norag_dsv4pro_1kpertask_q4_b40_10r__run9_replaced_sensitivity_seed669991378",
+        "seed": 42,
+        "n_samples": 138,
+        "n_init": 14,
+        "batch_size": 3,
+        "total_budget": 56,
+        "feature_representation": "raw",
+        "llm_scoring_model": "deepseek-v4-flash-ascend",
+        "llm_scoring_temperature": 0.0,
+        "llm_retrieval_mode": "disabled"
+      }
+    }
+  ]
+}
